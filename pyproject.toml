@@ -1,0 +1,12 @@
+[project]
+name = "custom-keycap-generator"
+version = "0.1.0"
+description = "Generate custom print-ready keycap geometries (build123d)"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "build123d>=0.7",
+    "numpy",
+    "pyyaml",
+    "tqdm",
+    "ocp-vscode",
+]
