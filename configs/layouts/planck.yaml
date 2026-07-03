@@ -1,0 +1,18 @@
+# Planck 40% (4x12 ortholinear), G20 uniform profile.
+#
+# Because the G20 base is uniform (back_dy == front_dy, no row sculpt), every
+# 1u key is geometrically identical. So the physical set is just TWO distinct
+# models, each printed in multiple copies:
+#   * key_1u  -> 47 copies  (48 positions minus the 2u spacebar)
+#   * key_2u  -> 1 copy      (bottom-row spacebar)
+#
+# Per-key legends (the real differentiator) come later, once key.py grows text
+# support; at that point each position becomes its own key here.
+
+keys:
+  key_1u:
+    base: G20
+    width: 1.0
+  key_2u:
+    base: G20
+    width: 2.0

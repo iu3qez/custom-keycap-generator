@@ -1,0 +1,56 @@
+# G20-style uniform low-profile set.
+# All lengths in millimeters, all angles in degrees.
+#
+# Unlike `default.yaml` (sculpted: heights differ per row), G20 is UNIFORM:
+# one low, near-flat base used by every key. back_dy == front_dy, so all 1u
+# keys are geometrically identical -> the "set" is really just one 1u + one 2u
+# model, each printed in multiple copies.
+
+global:
+  # Manufacturing tolerance (sliding)
+  tol: 0.1
+  # Manufacturing tolerance (friction-fit)
+  tol_tight: 0.1
+  # Wall thickness
+  wall: 1.2
+  # Rounding radius for inside edges (temperamental!).
+  # 0.3 is the largest value that fillets cleanly on this low flat top;
+  # 0.4+ fails ("no suitable edges") because the top sits close to the
+  # stem-fill block (stem_depth 3.8 + inner_rad vs. 6.0mm top).
+  inner_rad: 0.3
+
+  # Key footprint (1u)
+  key_h: 18.0
+  # Key corner/edge radius. Matches KeyV2 g20.scad $minkowski_radius = 1.75
+  # (4.0 read far too pillowy).
+  key_r: 1.75
+
+  # ~9.5deg taper on all sides. KeyV2 uses width/height_difference = 2, i.e.
+  # 1mm inset per side over the 6mm height -> atan(1/6) ~= 9.46deg.
+  back_slope: 9.5
+  front_slope: 9.5
+  side_slope: 9.5
+  # Flat top: KeyV2 g20 sets $dish_type = "disable". 0 => code takes the
+  # straight (close=True) polyline, no ThreePointArc dish.
+  back_curve: 0.0
+  front_curve: 0.0
+
+  stem:
+    # `formal` = standard Cherry MX cross (minimal is discouraged upstream)
+    type: formal
+
+# One uniform low base for the whole set (no per-row sculpt).
+# Top averages 6.0mm (= KeyV2 $total_depth for row 3), with the G20 micro-tilt
+# baked in: KeyV2 g20.scad uses $top_tilt = 2.5deg. Over the ~16mm top span that
+# is tan(2.5)*16 ~= 0.70mm front-to-back, split +/-0.35 around 6.0, back higher.
+# 5.65mm still clears stem_depth+inner_rad (~4.1mm) for a solid top.
+bases:
+  G20:
+    back_dy: 6.35
+    front_dy: 5.65
+
+# Optional convex (bulged) top, mirrors default.yaml
+modifiers:
+  convex:
+    back_curve: -0.5
+    front_curve: -0.5
