@@ -32,10 +32,18 @@ if __name__ == '__main__':
             export_brep(shape, path)
         elif args.format == 'step':
             export_step(shape, path)
-        elif args.format == '3mf':
-            mesher = Mesher(unit=Unit.MM)
-            mesher.add_shape(shape, linear_deflection=1e-3, angular_deflection=0.1)
-            mesher.write(path)
+
+    def export_3mf_multi(parts, path):
+        # One 3mf holding several named, aligned objects (body / legend / stem),
+        # ideal for MMU: import one file, then assign a material or modifier per
+        # object in the slicer. `parts` is a list of (object_name, shape).
+        mesher = Mesher(unit=Unit.MM)
+        for name, shape in parts:
+            mesher.add_shape(
+                shape, linear_deflection=1e-3, angular_deflection=0.1,
+                part_number=name,
+            )
+        mesher.write(path)
 
     print(f"Generating {len(layout['keys'])} keys...")
     for key_name, key_conf in tqdm(layout['keys'].items()):
@@ -52,18 +60,21 @@ if __name__ == '__main__':
         key_config = KeyConfig(**config)
         key = Key(key_config, stem)
 
-        base_path = os.path.join(args.output_path, f"{key_name}.{args.format}")
-        export_shape(key.shape(), base_path)                 # material 1
+        body = key.shape()               # material 1 (keycap with the recess)
+        plug = key.legend_plug()         # material 2 (flush legend, None if bare)
+        guard = key.stem_guard()         # slicer support-blocker modifier
 
-        plug = key.legend_plug()
-        if plug is not None:                                  # material 2
-            plug_path = os.path.join(
-                args.output_path, f"{key_name}.legend.{args.format}"
-            )
-            export_shape(plug, plug_path)
-
-        # Slicer support-blocker modifier (fills the stem's inner cross)
-        stem_path = os.path.join(
-            args.output_path, f"{key_name}.stem.{args.format}"
-        )
-        export_shape(key.stem_guard(), stem_path)
+        if args.format == '3mf':
+            # Bundle every body of a key into ONE multi-object 3mf.
+            parts = [(key_name, body)]
+            if plug is not None:
+                parts.append((f"{key_name}.legend", plug))
+            parts.append((f"{key_name}.stem", guard))
+            export_3mf_multi(parts, os.path.join(args.output_path, f"{key_name}.3mf"))
+        else:
+            out = args.output_path
+            fmt = args.format
+            export_shape(body, os.path.join(out, f"{key_name}.{fmt}"))
+            if plug is not None:
+                export_shape(plug, os.path.join(out, f"{key_name}.legend.{fmt}"))
+            export_shape(guard, os.path.join(out, f"{key_name}.stem.{fmt}"))
