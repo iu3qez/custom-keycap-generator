@@ -61,3 +61,9 @@ if __name__ == '__main__':
                 args.output_path, f"{key_name}.legend.{args.format}"
             )
             export_shape(plug, plug_path)
+
+        # Slicer support-blocker modifier (fills the stem's inner cross)
+        stem_path = os.path.join(
+            args.output_path, f"{key_name}.stem.{args.format}"
+        )
+        export_shape(key.stem_guard(), stem_path)

@@ -118,6 +118,21 @@ class Key:
             return None
         return cutter & self._outer_key_profile()
 
+    def stem_guard(self) -> Part:
+        """A slicer support-blocker modifier that fills the Cherry stem's inner
+        cross. Load it in the slicer as a modifier volume with supports
+        disabled, so no supports are generated inside the cross. Not printed as
+        material; it intentionally overlaps the stem. A plain cylinder the size
+        of the Cherry tube (radius `stem.stem_rad`), from the mounting face
+        (z=0) up over the cross depth (`stem_depth`)."""
+        with BuildPart() as guard:
+            Cylinder(
+                radius=self.stem.stem_rad,
+                height=self.stem_depth,
+                align=(Align.CENTER, Align.CENTER, Align.MIN),
+            )
+        return guard.part
+
     def _outer_key_profile(self, shift: float = 0.0) -> Part:
         """
         Generates the overall (non-hollow) outer shape of the key.
