@@ -1,0 +1,29 @@
+# Proof-of-concept layout for legend support. Five keys covering every case:
+# single letter, word, dual stacked ANSI pair, keyboard glyph, and a blank 2u.
+# The full 48-key Planck legend map is a follow-up.
+
+keys:
+  q:                                  # single letter (default size 5.5)
+    base: G20
+    width: 1.0
+    legends:
+      - {text: "Q"}
+  esc:                                # word legend, smaller
+    base: G20
+    width: 1.0
+    legends:
+      - {text: "Esc", size: 3.5}
+  semicolon:                          # dual ANSI stacked (base low, shift high)
+    base: G20
+    width: 1.0
+    legends:
+      - {text: ";", size: 4.0, dy: -1.0}
+      - {text: ":", size: 4.0, dy: 1.0}
+  tab:                                # keyboard glyph -> Adwaita Sans (auto)
+    base: G20
+    width: 1.0
+    legends:
+      - {text: "⇥"}
+  space2u:                            # 2u spacebar, no legend -> one file, no plug
+    base: G20
+    width: 2.0

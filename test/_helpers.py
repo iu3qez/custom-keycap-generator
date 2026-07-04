@@ -20,3 +20,24 @@ def make_key(legends=None, **overrides):
     if legends is not None:
         cfg["legends"] = legends
     return Key(KeyConfig(**cfg), stem_from_config(type="formal"))
+
+import yaml
+
+def build_from_layout(layout_name, style_name="g20"):
+    """Merge style+layout exactly like main.py and return {key_name: Key}."""
+    _here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with open(os.path.join(_here, f"configs/styles/{style_name}.yaml")) as f:
+        style = yaml.safe_load(f)
+    with open(os.path.join(_here, f"configs/layouts/{layout_name}.yaml")) as f:
+        layout = yaml.safe_load(f)
+
+    keys = {}
+    for name, kc in layout["keys"].items():
+        base = kc.pop("base", "")
+        mods = kc.pop("modifiers", [])
+        cfg = style["global"] | style["bases"].get(base, {}) | kc
+        for m in mods:
+            cfg = cfg | style["modifiers"][m]
+        stem = stem_from_config(**cfg.pop("stem", {}))
+        keys[name] = Key(KeyConfig(**cfg), stem)
+    return keys
