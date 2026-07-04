@@ -83,6 +83,41 @@ class Key:
             return self.legend_symbol_font
         return self.legend_font
 
+    @cached_property
+    def _legend_cutter(self) -> "Part | None":
+        """Vertical prism of the legend glyphs, flat-bottomed at `z_floor`,
+        tall enough to pass above the cap top. Subtracting it carves the recess;
+        intersecting it with the outer profile yields the flush plug."""
+        if not self.legends:
+            return None
+
+        # Top-surface height at the key center; the flat cutter floor sits
+        # `legend_depth` below it (recess depth ~uniform on the near-flat top).
+        h_center = (self.front_dy + self.back_dy) / 2.0
+        z_floor = h_center - self.legend_depth
+        z_top = self.max_height + 1.0            # safely above the tallest corner
+
+        with BuildPart() as cutter:
+            with BuildSketch(Plane.XY.offset(z_floor)):
+                for leg in self.legends:
+                    text = leg["text"]
+                    size = leg.get("size", self.legend_size)
+                    dx = leg.get("dx", 0.0)
+                    dy = leg.get("dy", 0.0)
+                    font = self._legend_font_for(text, leg.get("font"))
+                    with Locations((dx, dy)):
+                        Text(text, font_size=size, font=font)
+            extrude(amount=z_top - z_floor)
+        return cutter.part
+
+    def legend_plug(self) -> "Part | None":
+        """The flush legend plug (material 2): the cutter clipped by the solid
+        outer profile, so its top follows the cap surface exactly."""
+        cutter = self._legend_cutter
+        if cutter is None:
+            return None
+        return cutter & self._outer_key_profile()
+
     def _outer_key_profile(self, shift: float = 0.0) -> Part:
         """
         Generates the overall (non-hollow) outer shape of the key.
@@ -216,5 +251,10 @@ class Key:
                     fillet(sketch.vertices(), 0.999)
                 extrude(amount=self.max_front_height - y - 2)
             shape += bump.part
+
+        # Carve the legend recess (material 1). Done last so it cuts through the
+        # finished top surface; a no-op when the key has no legends.
+        if self._legend_cutter is not None:
+            shape = shape - self._legend_cutter
 
         return shape
