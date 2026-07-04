@@ -7,6 +7,15 @@
 Easily generate custom keycap sets for 3d-printing.
 This is primarily intended for strange key layouts, such as ergonomic or split keyboards, where pre-made keycap sets are hard to find.
 
+> **This fork** adds per-key **legends** and a full **Planck 40% set in a uniform G20 profile**,
+> built for **multi-material (MMU)** printing. Legends are flush plugs (a clean
+> `Text → extrude → intersect`, no coplanar slivers) exported as a separate body, plus a stem
+> support-blocker modifier per key. See [Legends & MMU](#legends--mmu-this-fork).
+>
+> ```bash
+> uv run python main.py g20 planck -f 3mf   # full Planck G20 set, one multi-object 3mf per key
+> ```
+
 ![Example keycap (stl)](img/r1.stl)
 ![Example keycaps (render, front)](img/render_front.png)
 ![Example keycaps (render, back)](img/render_back.png)
@@ -41,6 +50,37 @@ Supported formats are inherited from `build123d`:
 - brep
 - step
 - 3mf
+
+This fork uses [uv](https://docs.astral.sh/uv/) (`uv sync`, then `uv run python main.py …`).
+
+## Legends & MMU (this fork)
+
+Keys can carry per-key legends, exported as a separate flush body for multi-material printing:
+
+- **`<key>.<fmt>`** — the keycap body, with the legend recess carved in (material 1).
+- **`<key>.legend.<fmt>`** — a flush legend plug whose top follows the cap surface (material 2);
+  emitted only for keys that have legends.
+- **`<key>.stem.<fmt>`** — a cylinder filling the Cherry stem's inner cross, to load in the slicer
+  as a **modifier volume with supports disabled** (keeps supports out of the stem). Not printed.
+
+In `-f 3mf` mode these are bundled into **one multi-object `<key>.3mf`** (named objects); in
+stl/step/brep they are separate, coordinate-aligned files.
+
+Legends are set per key in the layout YAML:
+
+```yaml
+keys:
+  q:         {base: G20, width: 1.0, legends: [{text: "Q"}]}
+  esc:       {base: G20, width: 1.0, legends: [{text: "Esc", size: 3.5}]}   # word
+  semicolon: {base: G20, width: 1.0, legends: [{text: ";", size: 4.0, dy: -1.2},  # stacked ANSI pair
+                                               {text: ":", size: 4.0, dy:  1.2}]}
+  tab:       {base: G20, width: 1.0, legends: [{text: "⇥"}]}                 # glyph
+```
+
+Each legend entry: `text` (required), `size` (mm), `dx`/`dy` (offset on the top, mm), `font`
+(optional override). Fonts are auto-selected — **Nimbus Sans** for text/arrows, **Adwaita Sans**
+for the keyboard glyphs `⇥ ⌫ ⏎ ⇧`. The full example is `configs/layouts/planck.yaml` (Planck 40%,
+G20, 46 keys); `configs/styles/g20.yaml` is the uniform low profile.
 
 ## Configuration
 

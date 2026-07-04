@@ -8,14 +8,18 @@ A parametric **keycap** generator built on **build123d** (OpenCASCADE B-rep kern
 from `nicola-sorace/custom-keycap-generator`. Each keycap is a Python-built solid exported to
 STL/STEP/3MF/BREP — no meshing/CSG fragility.
 
-**Goal for this fork:** generate a full **Planck 40% (4×12 ortholinear) keycap set in a uniform
-G20-style profile with per-key legends**, ideally as separate legend bodies for multi-material
+**Goal for this fork (DONE):** generate a full **Planck 40% (4×12 ortholinear) keycap set in a
+uniform G20-style profile with per-key legends**, as separate legend bodies for multi-material
 (MMU) printing. We came here after hitting OpenSCAD/KeyV2 limits (coplanar-boolean sliver
 artifacts on flush legend plugs, `$`-variable propagation quirks). The B-rep kernel makes the
 legend plug a clean `Text → extrude → intersect(cap)` instead of a fragile mesh difference.
 
-> **Known gap:** upstream has **no legend/text support**. Adding legends to `key.py` is the main
-> work item here (see "Extending" below).
+The G20 profile (`configs/styles/g20.yaml`), the legend engine in `key.py`, the full 46-key
+`configs/layouts/planck.yaml`, a per-key stem support-blocker modifier, and multi-object 3mf
+export are all implemented. See "Legends & MMU export" below. Upstream still has no text support;
+that is this fork's addition.
+
+Design docs live in `docs/superpowers/specs/` and `docs/superpowers/plans/`.
 
 ## Environment & commands
 
@@ -23,17 +27,24 @@ Uses **uv** (Python 3.11). Deps are declared in `pyproject.toml` (`uv sync` writ
 
 ```bash
 uv sync                                   # create .venv and install (build123d/OCP wheels are large)
-uv run python main.py <style> <layout>    # generate a set -> output/<key_name>.<fmt>
-uv run python main.py default redox -f 3mf -o output   # example, 3mf format
+uv run python main.py g20 planck          # full Planck G20 set -> output/ (STL)
+uv run python main.py g20 planck -f 3mf   # one multi-object 3mf per key (body+legend+stem)
+uv run python main.py g20 planck_poc      # 5-key proof-of-concept (one per legend case)
 uv run python visualize.py                # live-preview ONE key via ocp_vscode `show()`
 ```
 
 - Formats: `stl` (default), `brep`, `step`, `3mf` (`-f/--format`), output dir via `-o`.
+- **Outputs per key:** `<key>.<fmt>` (body, material 1), `<key>.legend.<fmt>` (flush legend plug,
+  material 2 — only if the key has legends), `<key>.stem.<fmt>` (slicer support-blocker modifier).
+  In `3mf` mode these are **bundled into one multi-object `<key>.3mf`** (named objects); in
+  stl/step/brep they are separate files.
 - Config lives in `configs/styles/<style>.yaml` and `configs/layouts/<layout>.yaml`; `main.py`
   loads them **by bare name** (no path, no extension).
-- There is **no build/lint step and no real test suite** — `test/` and the `stress_test` layout
-  are ad-hoc geometry checks. "Testing" = render a key and inspect it.
-- `ocp_vscode` emits Fontconfig warnings on stderr; they are harmless.
+- **Tests** are plain `assert` scripts under `test/` (no pytest): `uv run python test/<file>.py`
+  prints `OK ...` per check. `test_legend_*`, `test_poc_layout`, `test_stem_guard` are fast unit
+  checks; `test_mmu_export` renders the POC set (slower, subprocess). Beyond these, "testing" =
+  render a key and inspect it. No build/lint step.
+- `ocp_vscode`/fontconfig emit warnings on stderr; they are harmless.
 
 ## Architecture
 
@@ -41,15 +52,21 @@ Three-file pipeline, all `from build123d import *`:
 
 - **`main.py`** — the runner. Merges config dicts in priority order
   `style.global | style.bases[base] | key_conf | style.modifiers[*]`, pops the `stem` sub-dict,
-  builds a `KeyConfig` + `Stem`, then exports **one file per key** in the layout. Note it uses
-  plain `dict |` merge, so a key's inline options override its base, and **modifiers override
-  everything** (applied last).
-- **`key.py`** — `KeyConfig` (dataclass of all tunables) and `Key`. `Key.shape()` is the whole
-  geometry: build a solid trapezoidal-prism outer profile (`_outer_key_profile`, via the
+  builds a `KeyConfig` + `Stem`, then exports each key's bodies (`shape()`, `legend_plug()`,
+  `stem_guard()`). In `3mf` mode it bundles them into one multi-object file via `Mesher`
+  (`export_3mf_multi`, `part_number` = object name); otherwise one file per body. Note the plain
+  `dict |` merge: a key's inline options override its base, and **modifiers override everything**
+  (applied last). build123d exporters are **module-level** functions (`export_stl/step/brep`); 3mf
+  uses `Mesher` — never `.export_*()` on a `Part`.
+- **`key.py`** — `KeyConfig` (dataclass of all tunables, incl. `legends`/`legend_depth`/
+  `legend_size`/`legend_font`/`legend_symbol_font`, all defaulted) and `Key`. `Key.shape()` is the
+  whole geometry: build a solid trapezoidal-prism outer profile (`_outer_key_profile`, via the
   **intersection of two lofts** — one along X, one along Y — with optional curved front/back tops
   and corner `fillet`), shell it by subtracting a `shift=-wall` copy of that same profile
   (deliberately **avoids build123d `offset`**, called unreliable), fill the top block so the stem
-  is short, add the stem, then optionally `fillet` inner edges and add a homing `bump`.
+  is short, add the stem, optionally `fillet` inner edges and add a homing `bump`, then **subtract
+  the legend cutter** to carve the recess. `legend_plug()` and `stem_guard()` return the two extra
+  bodies (see "Legends & MMU export").
 - **`stem.py`** — `stem_from_config(type=...)` → `StemFormal` (standard Cherry MX cross),
   `StemReinforced` (adds a rounded rectangle of material), `StemMinimal` (default in the shipped
   style; thin-wall variant, "not recommended"). Cherry dims live in the `Stem` dataclass.
@@ -61,26 +78,40 @@ top heights) plus `back_slope`/`front_slope`/`side_slope` and `back_curve`/`fron
 `ThreePointArc` dish; negative = convex, as the `convex` modifier does). Rows `R1..R4` in
 `configs/styles/default.yaml` are **sculpted** (heights differ per row).
 
-For a **uniform G20-style set**, make every base identical — one low, flat base
-(`back_dy == front_dy`, small; slopes/curves near-flat), so all 1u keys are geometrically the
-same. Consequence: the "set" only needs a couple of distinct models (**one 1u + one 2u**), each
-printed in multiple copies. Stem should be `formal` (the default `minimal` is discouraged).
+The **G20 set** (`configs/styles/g20.yaml`) is one uniform low base: flat top (`back_curve ==
+front_curve == 0`), 1.75mm edge radius, ~9.5° taper, and a 2.5° micro-tilt baked in via
+`back_dy 6.35 / front_dy 5.65` (avg 6.0mm), ported from `../KeyV2/src/key_profiles/g20.scad`.
+`inner_rad` is capped at 0.3 (larger fails to fillet on the low top). Stem is `formal`. Because
+the geometry is uniform, all 1u keys are identical *shape*; the per-key **legends** are what make
+each key a distinct model, so `configs/layouts/planck.yaml` enumerates all 46 keys.
 
-## Extending: legends (the main TODO)
+## Legends & MMU export
 
-`Key.shape()` has no text. To add flush legends per key:
-1. Add legend fields to `KeyConfig` (e.g. `legends: list`, size, font — hybrid font note below).
-2. Build the legend solid with `Text(...)` → `extrude`, positioned at the cap's top surface,
-   then **`intersect` with the cap solid** to get a clean flush plug (top follows the cap, no
-   coplanar-difference slivers).
-3. For MMU: return/export the legend plug as a **separate body** aligned to the cap (subtract the
-   plug from the cap for material 1, export the plug for material 2).
-4. Font caveat carried over from the OpenSCAD work: most sans fonts lack the keyboard glyphs
-   `⇥ ⌫ ⏎ ⇧`; use a hybrid — a nice sans (e.g. Nimbus Sans) for text, DejaVu only for those glyphs.
+Implemented in `key.py` (approach A: `Text → extrude → intersect`):
+
+- `_legend_cutter` (cached) builds a flat-bottomed vertical prism of all the key's `Text` glyphs,
+  floored `legend_depth` (0.8mm) below the top-center height. `shape()` subtracts it → the recess.
+- `legend_plug()` = `cutter & _outer_key_profile()` → a thin flush plug whose top follows the cap
+  surface exactly (a single intersection, so **no coplanar slivers** — the thing OpenSCAD couldn't
+  do). `body + plug` reconstructs the smooth cap (verified to ~0.008 mm³).
+- `stem_guard()` = a plain cylinder the size of the Cherry tube (`stem.stem_rad`, height
+  `stem_depth`, from z=0) that fills the stem's inner cross. Load it in the slicer as a **modifier
+  volume with supports disabled** so no supports print inside the cross. Not printed as material.
+- **Fonts** (hybrid, `_legend_font_for` auto-selects): **Nimbus Sans** for text/arrows,
+  **Adwaita Sans** for the keyboard glyphs `⇥ ⌫ ⏎ ⇧` (`SYMBOL_GLYPHS`). KeyV2 used DejaVu, but
+  DejaVu is not installed here — Adwaita covers those four glyphs. Per-legend `font` overrides.
+- **Layout legend spec** (per key, in the layout YAML): `legends: [{text, size, dx, dy, font}]`.
+  Words (Esc/Ctl/…) use `size: 3.5`; ANSI dual pairs `;: ,< .> /?` are two stacked entries at
+  `size: 4.0, dy: ±1.2`. Quote `"y"`/`"n"` layout keys so PyYAML doesn't read them as booleans.
+
+MMU workflow: import a key's `.3mf` (or its 3 STLs), assign material 1 to the body, material 2 to
+the `.legend` object(s), and mark the `.stem` object as a no-support modifier. (In 3mf, a legend
+with disconnected glyphs like "Esc" appears as several same-named `<key>.legend` objects — all one
+material.)
 
 ## Related prior work
 
-The original Planck/G20 target and the desired legend behaviour (gap-aware 13-col Planck layout,
-stacked ANSI dual legends on punctuation `;: ,< .> /?`, 2u spacebar, hybrid Nimbus/DejaVu fonts)
-were prototyped in OpenSCAD in the sibling repo `../KeyV2` (`planck_g20.scad`). Reuse those
-decisions when building the build123d equivalent.
+The original Planck/G20 target and the legend behaviour (Planck layout, stacked ANSI dual legends
+on punctuation `;: ,< .> /?`, 2u spacebar, hybrid fonts) were prototyped in OpenSCAD in the
+sibling repo `../KeyV2` (`planck_g20.scad`, `src/key_profiles/g20.scad`). Those decisions are now
+ported here; consult KeyV2 when tuning legend content or the G20 profile.
