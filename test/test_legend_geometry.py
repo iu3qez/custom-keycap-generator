@@ -30,7 +30,10 @@ def test_plug_is_thin_shard_near_top():
 def test_glyph_key_builds():
     # Adwaita glyph must render real geometry (not tofu / empty)
     k = make_key(legends=[{"text": "⇥"}])
-    assert k.legend_plug().volume > 0
+    plug = k.legend_plug()
+    assert plug.volume > 0
+    # a real thin top shard, not a full-height tofu box
+    assert plug.bounding_box().size.Z < 1.5
 
 if __name__ == "__main__":
     test_no_legends_is_none(); print("OK no-legend is None")

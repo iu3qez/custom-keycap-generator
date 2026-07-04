@@ -1,4 +1,4 @@
-import os, sys, subprocess, tempfile
+import os, subprocess, tempfile
 
 _HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

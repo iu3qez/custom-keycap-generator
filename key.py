@@ -34,6 +34,7 @@ class KeyConfig:
     legend_font: str = "Nimbus Sans"
     legend_symbol_font: str = "Adwaita Sans"
 
+
 class Key:
     def __init__(self, config: KeyConfig, stem: Stem):
         self.tol = config.tol

@@ -1,5 +1,6 @@
 """Shared builders for the plain-assert legend test scripts."""
 import os, sys
+import yaml
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from key import KeyConfig, Key
@@ -21,7 +22,6 @@ def make_key(legends=None, **overrides):
         cfg["legends"] = legends
     return Key(KeyConfig(**cfg), stem_from_config(type="formal"))
 
-import yaml
 
 def build_from_layout(layout_name, style_name="g20"):
     """Merge style+layout exactly like main.py and return {key_name: Key}."""

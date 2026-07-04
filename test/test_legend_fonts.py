@@ -8,8 +8,9 @@ def test_font_auto_selection():
     k = make_key(legends=[])
     assert k._legend_font_for("Q") == "Nimbus Sans"     # letter -> main
     assert k._legend_font_for("←") == "Nimbus Sans"     # arrow -> main
-    assert k._legend_font_for("⇥") == "Adwaita Sans"    # glyph -> symbol
-    assert k._legend_font_for("⌫") == "Adwaita Sans"
+    # every keyboard glyph routes to the symbol font
+    for glyph in SYMBOL_GLYPHS:
+        assert k._legend_font_for(glyph) == "Adwaita Sans", glyph
 
 def test_font_override():
     k = make_key(legends=[])

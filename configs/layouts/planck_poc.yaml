@@ -17,8 +17,8 @@ keys:
     base: G20
     width: 1.0
     legends:
-      - {text: ";", size: 4.0, dy: -1.0}
-      - {text: ":", size: 4.0, dy: 1.0}
+      - {text: ";", size: 4.0, dy: -1.2}
+      - {text: ":", size: 4.0, dy: 1.2}
   tab:                                # keyboard glyph -> Adwaita Sans (auto)
     base: G20
     width: 1.0
