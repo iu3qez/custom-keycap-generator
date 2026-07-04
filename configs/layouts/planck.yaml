@@ -1,18 +1,67 @@
-# Planck 40% (4x12 ortholinear), G20 uniform profile.
+# Full Planck 40% (4x12 ortholinear, MIT bottom row with a 2u spacebar),
+# G20 uniform profile, QWERTY legends. Ported from ../KeyV2/planck_g20.scad.
 #
-# Because the G20 base is uniform (back_dy == front_dy, no row sculpt), every
-# 1u key is geometrically identical. So the physical set is just TWO distinct
-# models, each printed in multiple copies:
-#   * key_1u  -> 47 copies  (48 positions minus the 2u spacebar)
-#   * key_2u  -> 1 copy      (bottom-row spacebar)
+# 46 distinct keys: every 1u position is its own model because the legend
+# differs, even though the G20 geometry is identical. `shift` (the ⇧ glyph)
+# serves both bottom-corner positions of row 2 -> print shift.stl twice.
+# `space2u` is the blank 2u spacebar.
 #
-# Per-key legends (the real differentiator) come later, once key.py grows text
-# support; at that point each position becomes its own key here.
+# Legend rules (from KeyV2): letters/arrows Nimbus 5.5; glyphs ⇥⌫⏎⇧ Adwaita 5.5
+# (auto); words Esc/Ctl/Alt/Cmd/Lwr/Rse/Fn 3.5; ANSI dual pairs ;: ,< .> /?
+# stacked at size 4.0, dy ±1.2. "y"/"n" keys are quoted so PyYAML doesn't read
+# them as booleans.
 
 keys:
-  key_1u:
-    base: G20
-    width: 1.0
-  key_2u:
-    base: G20
-    width: 2.0
+  # --- Row 0 (top): ⇥ Q W E R T  Y U I O P ⌫ ---------------------------------
+  tab:  {base: G20, width: 1.0, legends: [{text: "⇥"}]}
+  q:    {base: G20, width: 1.0, legends: [{text: "Q"}]}
+  w:    {base: G20, width: 1.0, legends: [{text: "W"}]}
+  e:    {base: G20, width: 1.0, legends: [{text: "E"}]}
+  r:    {base: G20, width: 1.0, legends: [{text: "R"}]}
+  t:    {base: G20, width: 1.0, legends: [{text: "T"}]}
+  "y":  {base: G20, width: 1.0, legends: [{text: "Y"}]}
+  u:    {base: G20, width: 1.0, legends: [{text: "U"}]}
+  i:    {base: G20, width: 1.0, legends: [{text: "I"}]}
+  o:    {base: G20, width: 1.0, legends: [{text: "O"}]}
+  p:    {base: G20, width: 1.0, legends: [{text: "P"}]}
+  bksp: {base: G20, width: 1.0, legends: [{text: "⌫"}]}
+
+  # --- Row 1 (home): Esc A S D F G  H J K L ;: ⏎ -----------------------------
+  esc:  {base: G20, width: 1.0, legends: [{text: "Esc", size: 3.5}]}
+  a:    {base: G20, width: 1.0, legends: [{text: "A"}]}
+  s:    {base: G20, width: 1.0, legends: [{text: "S"}]}
+  d:    {base: G20, width: 1.0, legends: [{text: "D"}]}
+  f:    {base: G20, width: 1.0, legends: [{text: "F"}]}
+  g:    {base: G20, width: 1.0, legends: [{text: "G"}]}
+  h:    {base: G20, width: 1.0, legends: [{text: "H"}]}
+  j:    {base: G20, width: 1.0, legends: [{text: "J"}]}
+  k:    {base: G20, width: 1.0, legends: [{text: "K"}]}
+  l:    {base: G20, width: 1.0, legends: [{text: "L"}]}
+  semicolon: {base: G20, width: 1.0, legends: [{text: ";", size: 4.0, dy: -1.2}, {text: ":", size: 4.0, dy: 1.2}]}
+  enter: {base: G20, width: 1.0, legends: [{text: "⏎"}]}
+
+  # --- Row 2: ⇧ Z X C V B N M ,< .> /? ⇧ -------------------------------------
+  shift: {base: G20, width: 1.0, legends: [{text: "⇧"}]}
+  z:    {base: G20, width: 1.0, legends: [{text: "Z"}]}
+  x:    {base: G20, width: 1.0, legends: [{text: "X"}]}
+  c:    {base: G20, width: 1.0, legends: [{text: "C"}]}
+  v:    {base: G20, width: 1.0, legends: [{text: "V"}]}
+  b:    {base: G20, width: 1.0, legends: [{text: "B"}]}
+  "n":  {base: G20, width: 1.0, legends: [{text: "N"}]}
+  m:    {base: G20, width: 1.0, legends: [{text: "M"}]}
+  comma:  {base: G20, width: 1.0, legends: [{text: ",", size: 4.0, dy: -1.2}, {text: "<", size: 4.0, dy: 1.2}]}
+  period: {base: G20, width: 1.0, legends: [{text: ".", size: 4.0, dy: -1.2}, {text: ">", size: 4.0, dy: 1.2}]}
+  slash:  {base: G20, width: 1.0, legends: [{text: "/", size: 4.0, dy: -1.2}, {text: "?", size: 4.0, dy: 1.2}]}
+
+  # --- Row 3 (bottom): Fn Ctl Alt Cmd Lwr [2u Space] Rse ← ↓ ↑ → -------------
+  fn:    {base: G20, width: 1.0, legends: [{text: "Fn",  size: 3.5}]}
+  ctrl:  {base: G20, width: 1.0, legends: [{text: "Ctl", size: 3.5}]}
+  alt:   {base: G20, width: 1.0, legends: [{text: "Alt", size: 3.5}]}
+  cmd:   {base: G20, width: 1.0, legends: [{text: "Cmd", size: 3.5}]}
+  lower: {base: G20, width: 1.0, legends: [{text: "Lwr", size: 3.5}]}
+  space2u: {base: G20, width: 2.0}
+  raise: {base: G20, width: 1.0, legends: [{text: "Rse", size: 3.5}]}
+  left:  {base: G20, width: 1.0, legends: [{text: "←"}]}
+  down:  {base: G20, width: 1.0, legends: [{text: "↓"}]}
+  up:    {base: G20, width: 1.0, legends: [{text: "↑"}]}
+  right: {base: G20, width: 1.0, legends: [{text: "→"}]}
