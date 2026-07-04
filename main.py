@@ -40,15 +40,24 @@ if __name__ == '__main__':
         key_config = KeyConfig(**config)
         key = Key(key_config, stem)
 
-        out_path = os.path.join(args.output_path, f"{key_name}.{args.format}")
-        shape = key.shape()
-        if args.format == 'stl':
-            export_stl(shape, out_path)
-        elif args.format == 'brep':
-            export_brep(shape, out_path)
-        elif args.format == 'step':
-            export_step(shape, out_path)
-        elif args.format == '3mf':
-            mesher = Mesher(unit=Unit.MM)
-            mesher.add_shape(shape, linear_deflection=1e-3, angular_deflection=0.1)
-            mesher.write(out_path)
+        def export_shape(shape, path):
+            if args.format == 'stl':
+                export_stl(shape, path)
+            elif args.format == 'brep':
+                export_brep(shape, path)
+            elif args.format == 'step':
+                export_step(shape, path)
+            elif args.format == '3mf':
+                mesher = Mesher(unit=Unit.MM)
+                mesher.add_shape(shape, linear_deflection=1e-3, angular_deflection=0.1)
+                mesher.write(path)
+
+        base_path = os.path.join(args.output_path, f"{key_name}.{args.format}")
+        export_shape(key.shape(), base_path)                 # material 1
+
+        plug = key.legend_plug()
+        if plug is not None:                                  # material 2
+            plug_path = os.path.join(
+                args.output_path, f"{key_name}.legend.{args.format}"
+            )
+            export_shape(plug, plug_path)
