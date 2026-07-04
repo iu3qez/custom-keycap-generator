@@ -1,7 +1,11 @@
 from build123d import *
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from functools import cached_property
 from stem import Stem
+
+
+SYMBOL_GLYPHS = {"⇥", "⌫", "⏎", "⇧"}
 
 
 @dataclass
@@ -24,6 +28,11 @@ class KeyConfig:
     back_dy: float
     width: float  # As a multiple of `key_h`
     bump: bool = False
+    legends: list = field(default_factory=list)
+    legend_depth: float = 0.8
+    legend_size: float = 5.5
+    legend_font: str = "Nimbus Sans"
+    legend_symbol_font: str = "Adwaita Sans"
 
 class Key:
     def __init__(self, config: KeyConfig, stem: Stem):
@@ -57,8 +66,22 @@ class Key:
         self.stem_rad = 0.3
 
         self.bump = config.bump
+        self.legends = config.legends
+        self.legend_depth = config.legend_depth
+        self.legend_size = config.legend_size
+        self.legend_font = config.legend_font
+        self.legend_symbol_font = config.legend_symbol_font
 
         self.stem = stem
+
+    def _legend_font_for(self, text: str, override: str | None = None) -> str:
+        """Pick the font for a legend: explicit override, else the symbol font
+        for keyboard glyphs, else the main font."""
+        if override:
+            return override
+        if any(ch in SYMBOL_GLYPHS for ch in text):
+            return self.legend_symbol_font
+        return self.legend_font
 
     def _outer_key_profile(self, shift: float = 0.0) -> Part:
         """

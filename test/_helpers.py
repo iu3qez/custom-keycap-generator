@@ -1,0 +1,22 @@
+"""Shared builders for the plain-assert legend test scripts."""
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from key import KeyConfig, Key
+from stem import stem_from_config
+
+# G20 reference geometry (mirrors configs/styles/g20.yaml)
+_G20 = dict(
+    tol=0.1, tol_tight=0.1, wall=1.2, inner_rad=0.3,
+    key_h=18.0, key_r=1.75,
+    back_slope=9.5, front_slope=9.5, side_slope=9.5,
+    back_curve=0.0, front_curve=0.0,
+    back_dy=6.35, front_dy=5.65, width=1.0,
+)
+
+def make_key(legends=None, **overrides):
+    cfg = dict(_G20)
+    cfg.update(overrides)
+    if legends is not None:
+        cfg["legends"] = legends
+    return Key(KeyConfig(**cfg), stem_from_config(type="formal"))
