@@ -66,6 +66,13 @@ Keys can carry per-key legends, exported as a separate flush body for multi-mate
 In `-f 3mf` mode these are bundled into **one multi-object `<key>.3mf`** (named objects); in
 stl/step/brep they are separate, coordinate-aligned files.
 
+To get the **whole set as one file** (a CAD preview/archive), `assemble.py` lays every key out at
+its grid position and writes a single multi-solid STEP:
+
+```bash
+uv run python assemble.py g20 planck   # -> output/planck.step (all keys, named solids)
+```
+
 Legends are set per key in the layout YAML:
 
 ```yaml

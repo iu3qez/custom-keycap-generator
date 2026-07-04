@@ -30,6 +30,7 @@ uv sync                                   # create .venv and install (build123d/
 uv run python main.py g20 planck          # full Planck G20 set -> output/ (STL)
 uv run python main.py g20 planck -f 3mf   # one multi-object 3mf per key (body+legend+stem)
 uv run python main.py g20 planck_poc      # 5-key proof-of-concept (one per legend case)
+uv run python assemble.py g20 planck      # whole set in ONE STEP -> output/planck.step
 uv run python visualize.py                # live-preview ONE key via ocp_vscode `show()`
 ```
 
@@ -67,6 +68,11 @@ Three-file pipeline, all `from build123d import *`:
   is short, add the stem, optionally `fillet` inner edges and add a homing `bump`, then **subtract
   the legend cutter** to carve the recess. `legend_plug()` and `stem_guard()` return the two extra
   bodies (see "Legends & MMU export").
+- **`assemble.py`** — separate entry point that lays every key out at its grid position (from the
+  layout's top-level `grid:` section, `UNIT = 19mm/unit`) and writes the whole set as **one
+  multi-solid STEP** (`output/<layout>.step`), each solid labeled `<key>` / `<key>.legend` /
+  `<key>.stem`. A CAD preview/archive of the full set; `main.py` is unaffected (it reads only
+  `keys:`, ignoring `grid:`).
 - **`stem.py`** — `stem_from_config(type=...)` → `StemFormal` (standard Cherry MX cross),
   `StemReinforced` (adds a rounded rectangle of material), `StemMinimal` (default in the shipped
   style; thin-wall variant, "not recommended"). Cherry dims live in the `Stem` dataclass.

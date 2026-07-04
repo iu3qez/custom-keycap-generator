@@ -65,3 +65,13 @@ keys:
   down:  {base: G20, width: 1.0, legends: [{text: "↓"}]}
   up:    {base: G20, width: 1.0, legends: [{text: "↑"}]}
   right: {base: G20, width: 1.0, legends: [{text: "→"}]}
+
+# Physical placement of the keys (used only by assemble.py to build a single
+# whole-set STEP; main.py ignores it). Each row lists key names left-to-right;
+# x advances by each key's `width` (so the 2u spacebar takes two slots). "shift"
+# appears at both ends of row 2 — same model, placed twice.
+grid:
+  - [tab, q, w, e, r, t, y, u, i, o, p, bksp]
+  - [esc, a, s, d, f, g, h, j, k, l, semicolon, enter]
+  - [shift, z, x, c, v, b, n, m, comma, period, slash, shift]
+  - [fn, ctrl, alt, cmd, lower, space2u, raise, left, down, up, right]
