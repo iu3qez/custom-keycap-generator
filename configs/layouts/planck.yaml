@@ -6,10 +6,10 @@
 # serves both bottom-corner positions of row 2 -> print shift.stl twice.
 # `space2u` is the blank 2u spacebar.
 #
-# Legend rules (from KeyV2): letters/arrows Nimbus 5.5; glyphs ⇥⌫⏎⇧ Adwaita 5.5
-# (auto); words Esc/Ctl/Alt/Cmd/Lwr/Rse/Fn 3.5; ANSI dual pairs ;: ,< .> /?
-# stacked at size 4.0, dy ±1.2. "y"/"n" keys are quoted so PyYAML doesn't read
-# them as booleans.
+# Legend rules (from KeyV2): letters/arrows Nimbus + glyphs ⇥⌫⏎⇧ Adwaita use the
+# style default size (g20.yaml legend_size = 6.0); words Esc/Ctl/Alt/Cmd/Lwr/Rse/Fn
+# at 4.0; ANSI dual pairs ;: ,< .> /? stacked at 4.5, dy ±1.7. "y"/"n" keys are
+# quoted so PyYAML doesn't read them as booleans.
 
 keys:
   # --- Row 0 (top): ⇥ Q W E R T  Y U I O P ⌫ ---------------------------------
@@ -27,7 +27,7 @@ keys:
   bksp: {base: G20, width: 1.0, legends: [{text: "⌫"}]}
 
   # --- Row 1 (home): Esc A S D F G  H J K L ;: ⏎ -----------------------------
-  esc:  {base: G20, width: 1.0, legends: [{text: "Esc", size: 3.5}]}
+  esc:  {base: G20, width: 1.0, legends: [{text: "Esc", size: 4.0}]}
   a:    {base: G20, width: 1.0, legends: [{text: "A"}]}
   s:    {base: G20, width: 1.0, legends: [{text: "S"}]}
   d:    {base: G20, width: 1.0, legends: [{text: "D"}]}
@@ -37,7 +37,7 @@ keys:
   j:    {base: G20, width: 1.0, legends: [{text: "J"}]}
   k:    {base: G20, width: 1.0, legends: [{text: "K"}]}
   l:    {base: G20, width: 1.0, legends: [{text: "L"}]}
-  semicolon: {base: G20, width: 1.0, legends: [{text: ";", size: 4.0, dy: -1.2}, {text: ":", size: 4.0, dy: 1.2}]}
+  semicolon: {base: G20, width: 1.0, legends: [{text: ";", size: 4.5, dy: -1.7}, {text: ":", size: 4.5, dy: 1.7}]}
   enter: {base: G20, width: 1.0, legends: [{text: "⏎"}]}
 
   # --- Row 2: ⇧ Z X C V B N M ,< .> /? ⇧ -------------------------------------
@@ -49,18 +49,18 @@ keys:
   b:    {base: G20, width: 1.0, legends: [{text: "B"}]}
   "n":  {base: G20, width: 1.0, legends: [{text: "N"}]}
   m:    {base: G20, width: 1.0, legends: [{text: "M"}]}
-  comma:  {base: G20, width: 1.0, legends: [{text: ",", size: 4.0, dy: -1.2}, {text: "<", size: 4.0, dy: 1.2}]}
-  period: {base: G20, width: 1.0, legends: [{text: ".", size: 4.0, dy: -1.2}, {text: ">", size: 4.0, dy: 1.2}]}
-  slash:  {base: G20, width: 1.0, legends: [{text: "/", size: 4.0, dy: -1.2}, {text: "?", size: 4.0, dy: 1.2}]}
+  comma:  {base: G20, width: 1.0, legends: [{text: ",", size: 4.5, dy: -1.7}, {text: "<", size: 4.5, dy: 1.7}]}
+  period: {base: G20, width: 1.0, legends: [{text: ".", size: 4.5, dy: -1.7}, {text: ">", size: 4.5, dy: 1.7}]}
+  slash:  {base: G20, width: 1.0, legends: [{text: "/", size: 4.5, dy: -1.7}, {text: "?", size: 4.5, dy: 1.7}]}
 
   # --- Row 3 (bottom): Fn Ctl Alt Cmd Lwr [2u Space] Rse ← ↓ ↑ → -------------
-  fn:    {base: G20, width: 1.0, legends: [{text: "Fn",  size: 3.5}]}
-  ctrl:  {base: G20, width: 1.0, legends: [{text: "Ctl", size: 3.5}]}
-  alt:   {base: G20, width: 1.0, legends: [{text: "Alt", size: 3.5}]}
-  cmd:   {base: G20, width: 1.0, legends: [{text: "Cmd", size: 3.5}]}
-  lower: {base: G20, width: 1.0, legends: [{text: "Lwr", size: 3.5}]}
+  fn:    {base: G20, width: 1.0, legends: [{text: "Fn",  size: 4.0}]}
+  ctrl:  {base: G20, width: 1.0, legends: [{text: "Ctl", size: 4.0}]}
+  alt:   {base: G20, width: 1.0, legends: [{text: "Alt", size: 4.0}]}
+  cmd:   {base: G20, width: 1.0, legends: [{text: "Cmd", size: 4.0}]}
+  lower: {base: G20, width: 1.0, legends: [{text: "Lwr", size: 4.0}]}
   space2u: {base: G20, width: 2.0}
-  raise: {base: G20, width: 1.0, legends: [{text: "Rse", size: 3.5}]}
+  raise: {base: G20, width: 1.0, legends: [{text: "Rse", size: 4.0}]}
   left:  {base: G20, width: 1.0, legends: [{text: "←"}]}
   down:  {base: G20, width: 1.0, legends: [{text: "↓"}]}
   up:    {base: G20, width: 1.0, legends: [{text: "↑"}]}

@@ -12,13 +12,13 @@ keys:
     base: G20
     width: 1.0
     legends:
-      - {text: "Esc", size: 3.5}
+      - {text: "Esc", size: 4.0}
   semicolon:                          # dual ANSI stacked (base low, shift high)
     base: G20
     width: 1.0
     legends:
-      - {text: ";", size: 4.0, dy: -1.2}
-      - {text: ":", size: 4.0, dy: 1.2}
+      - {text: ";", size: 4.5, dy: -1.7}
+      - {text: ":", size: 4.5, dy: 1.7}
   tab:                                # keyboard glyph -> Adwaita Sans (auto)
     base: G20
     width: 1.0

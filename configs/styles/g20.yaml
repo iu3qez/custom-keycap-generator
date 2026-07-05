@@ -25,6 +25,10 @@ global:
   # (4.0 read far too pillowy).
   key_r: 1.75
 
+  # Default legend size (single chars: letters, arrows, glyphs). Words and dual
+  # pairs set their own size in the layout. 5.5 read a touch small on G20.
+  legend_size: 6.0
+
   # ~9.5deg taper on all sides. KeyV2 uses width/height_difference = 2, i.e.
   # 1mm inset per side over the 6mm height -> atan(1/6) ~= 9.46deg.
   back_slope: 9.5
