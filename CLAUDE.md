@@ -19,6 +19,13 @@ The G20 profile (`configs/styles/g20.yaml`), the legend engine in `key.py`, the 
 export are all implemented. See "Legends & MMU export" below. Upstream still has no text support;
 that is this fork's addition.
 
+**Also added:** a **Vial-keymap → keycap** generator (`generate_vial.py` + `vial.py`). It builds a
+whole set from a `.vil` keymap, placing up to four layers in the cap's four quadrants (layer 0
+large top-left; layers 1/2/3 small, clockwise) — A-Z/0-9 & symbols as text, functional keys as
+**Lucide** icons (SVG legends, fetched on demand). Works from the keymap alone (ortho grid derived
+from the matrix) or with an explicit `--board` KLE definition. See the `vial.py` /
+`generate_vial.py` bullets under Architecture.
+
 Design docs live in `docs/superpowers/specs/` and `docs/superpowers/plans/`.
 
 ## Environment & commands

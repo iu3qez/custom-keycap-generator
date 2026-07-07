@@ -12,8 +12,13 @@ This is primarily intended for strange key layouts, such as ergonomic or split k
 > `Text → extrude → intersect`, no coplanar slivers) exported as a separate body, plus a stem
 > support-blocker modifier per key. See [Legends & MMU](#legends--mmu-this-fork).
 >
+> It can also build a whole set straight from a **Vial keymap**, laying up to four layers into the
+> cap's four quadrants and drawing functional keys as **[Lucide](https://lucide.dev/icons/) icons**
+> (text stays text). See [From a Vial keymap](#from-a-vial-keymap-this-fork).
+>
 > ```bash
-> uv run python main.py g20 planck -f 3mf   # full Planck G20 set, one multi-object 3mf per key
+> uv run python main.py g20 planck -f 3mf       # full Planck G20 set, one multi-object 3mf per key
+> uv run python generate_vial.py g20 keymap.vil -f 3mf   # a set straight from a Vial keymap
 > ```
 
 ![Example keycap (stl)](img/r1.stl)

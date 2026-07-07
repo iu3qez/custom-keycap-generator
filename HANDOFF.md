@@ -50,6 +50,34 @@ Tests are plain `assert` scripts (no pytest): `uv run python test/<file>.py`.
 Docs: `docs/superpowers/specs/2026-07-04-keycap-legends-design.md` (spec),
 `docs/superpowers/plans/2026-07-04-keycap-legends.md` (plan).
 
+## Vial keymap → keycaps (added 2026-07-07)
+
+Generate a whole set from a **Vial** keymap, with up to four layers laid into the cap's four
+quadrants (layer 0 large top-left; layers 1/2/3 small, clockwise). New files: `vial.py` (parsing +
+keycode resolution + Lucide fetch + quadrant layout) and `generate_vial.py` (runner).
+
+```bash
+uv run python generate_vial.py g20 keymap.vil -f 3mf              # ortho grid from the keymap
+uv run python generate_vial.py g20 keymap.vil --board board.json  # exact positions/widths
+uv run python generate_vial.py g20 keymap.vil --emit-layout out.yaml   # dump computed legends
+```
+
+- **Legends**: A-Z/0-9 and typographic/keypad symbols → **text**; functional keys (Shift, Enter,
+  arrows, media, RGB `RM_*`, …) → **[Lucide](https://lucide.dev/icons/) icons**, fetched on demand
+  into `assets/lucide-cache/` (gitignored). Extend `KEYCODE_TO_LUCIDE` / `RM_TO_LUCIDE` /
+  `KC_ALIASES` in `vial.py`. Transparent / `-1` layers leave that quadrant empty.
+- **SVG legends** in `key.py`: a legend entry may be `{svg: path, size, dx, dy}`. Closed wires are
+  filled; open Lucide strokes are inflated into ribbons via `offset(side=Side.BOTH)` — **not**
+  `trace()`, which **segfaults** the OCP kernel.
+- **No board file needed**: `board_from_keymap()` derives a 1u ortho grid from the `.vil` matrix; an
+  interior `-1` gap is absorbed by the neighbouring key, so a 2u spacebar comes out 2u. Position is
+  preview-only; a printed keycap depends solely on width. Pass `--board` for a KLE definition when
+  widths are non-obvious.
+- **Tests**: `test/test_vial.py` (offline: parser, keycode resolver, ortho grid, quadrant layout).
+
+Open tuning points: closed-outline Lucide icons render solid (interior detail lost — robust for
+MMU, less faithful to the stroke look); several icon choices (`KC_HOME`, `RM_*`) are best-effort.
+
 ## Known gaps / optional next
 
 - **`Mesher.read()` hangs** (build123d bug) — the 3mf test inspects the archive XML instead. Read
