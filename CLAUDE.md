@@ -32,6 +32,7 @@ uv run python main.py g20 planck -f 3mf   # one multi-object 3mf per key (body+l
 uv run python main.py g20 planck_poc      # 5-key proof-of-concept (one per legend case)
 uv run python assemble.py g20 planck      # whole set in ONE STEP -> output/planck.step
 uv run python visualize.py                # live-preview ONE key via ocp_vscode `show()`
+uv run python generate_vial.py g20 board.json keymap.vil -f 3mf   # set from a Vial keymap
 ```
 
 - Formats: `stl` (default), `brep`, `step`, `3mf` (`-f/--format`), output dir via `-o`.
@@ -43,7 +44,8 @@ uv run python visualize.py                # live-preview ONE key via ocp_vscode 
   loads them **by bare name** (no path, no extension).
 - **Tests** are plain `assert` scripts under `test/` (no pytest): `uv run python test/<file>.py`
   prints `OK ...` per check. `test_legend_*`, `test_poc_layout`, `test_stem_guard` are fast unit
-  checks; `test_mmu_export` renders the POC set (slower, subprocess). Beyond these, "testing" =
+  checks; `test_vial` covers the Vial parser/keycode-resolver/quadrant layout (offline, no icon
+  fetch); `test_mmu_export` renders the POC set (slower, subprocess). Beyond these, "testing" =
   render a key and inspect it. No build/lint step.
 - `ocp_vscode`/fontconfig emit warnings on stderr; they are harmless.
 
@@ -67,7 +69,20 @@ Three-file pipeline, all `from build123d import *`:
   (deliberately **avoids build123d `offset`**, called unreliable), fill the top block so the stem
   is short, add the stem, optionally `fillet` inner edges and add a homing `bump`, then **subtract
   the legend cutter** to carve the recess. `legend_plug()` and `stem_guard()` return the two extra
-  bodies (see "Legends & MMU export").
+  bodies (see "Legends & MMU export"). A legend entry is `{text: …}` **or** `{svg: <path>, …}`;
+  SVG legends go through `svg_legend_sketch` (module-level, `@lru_cache`d): `import_svg` → fill
+  closed wires, inflate open strokes into ribbons via `offset(side=Side.BOTH)` (build123d `trace`
+  **segfaults** the OCP kernel — do not use it), then center + mirror-Y + scale to `size`.
+- **`vial.py`** — Vial → legends. `parse_board` reads a keyboard's KLE layout (`layouts.keymap`)
+  into physical keys (matrix pos + width from standard KLE cursor rules); `parse_keymap` reads a
+  `.vil` into `layout[layer][row][col]`. `resolve_keycode` maps a keycode to text or a Lucide icon
+  name (A-Z/0-9 & typographic symbols → text; functional keys → `KEYCODE_TO_LUCIDE`; transparent →
+  None; wrappers unwrapped). `quadrant_legends` places up to four layers clockwise from the large
+  top-left main (`QuadrantSpec` holds sizes/offsets). `lucide_svg` fetches icons from Lucide's
+  GitHub raw endpoint into `assets/lucide-cache/` (gitignored) via urllib + the proxy CA bundle.
+- **`generate_vial.py`** — runner: `style + board.json + keymap.vil` → one cap per physical key,
+  same three exported bodies as `main.py`. `--emit-layout` dumps the computed keys as a layout YAML;
+  `--base`/`--layers`/`--glyph-dir` tune the run.
 - **`assemble.py`** — separate entry point that lays every key out at its grid position (from the
   layout's top-level `grid:` section, `UNIT = 19mm/unit`) and writes the whole set as **one
   multi-solid STEP** (`output/<layout>.step`), each solid labeled `<key>` / `<key>.legend` /

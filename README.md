@@ -84,10 +84,48 @@ keys:
   tab:       {base: G20, width: 1.0, legends: [{text: "⇥"}]}                 # glyph
 ```
 
-Each legend entry: `text` (required), `size` (mm), `dx`/`dy` (offset on the top, mm), `font`
-(optional override). Fonts are auto-selected — **Nimbus Sans** for text/arrows, **Adwaita Sans**
-for the keyboard glyphs `⇥ ⌫ ⏎ ⇧`. The full example is `configs/layouts/planck.yaml` (Planck 40%,
-G20, 46 keys); `configs/styles/g20.yaml` is the uniform low profile.
+Each legend entry is **either** `text` **or** `svg` (a path to an SVG file, filled and carved just
+like text), plus `size` (mm — cap-height for text, larger-bbox for SVG), `dx`/`dy` (offset on the
+top, mm), and `font` (optional text override). Fonts are auto-selected — **Nimbus Sans** for
+text/arrows, **Adwaita Sans** for the keyboard glyphs `⇥ ⌫ ⏎ ⇧`. The full example is
+`configs/layouts/planck.yaml` (Planck 40%, G20, 46 keys); `configs/styles/g20.yaml` is the uniform
+low profile.
+
+## From a Vial keymap (this fork)
+
+Generate a whole set straight from a **Vial** keymap, with up to four layers laid out in the cap's
+four quadrants:
+
+```bash
+uv run python generate_vial.py g20 board.json keymap.vil -f 3mf
+```
+
+- **`board.json`** — the keyboard's Vial definition (KLE physical layout under `layouts.keymap`);
+  supplies key positions and widths.
+- **`keymap.vil`** — a Vial keymap export (`layout[layer][row][col]` of keycodes).
+
+Each cap gets one legend per layer, placed clockwise from the large main legend:
+
+| quadrant     | layer | size  |
+|--------------|-------|-------|
+| top-left     | 0     | large |
+| top-right    | 1     | small |
+| bottom-right | 2     | small |
+| bottom-left  | 3     | small |
+
+Keycodes resolve to legends automatically (`vial.py`):
+
+- **A-Z / 0-9** and typographic symbols (`; , . / - = [ ] ! @ …`) → **text**.
+- **Functional keys** (Shift, Ctrl, Alt, Cmd, Enter, Tab, Backspace, arrows, media, …) →
+  **[Lucide](https://lucide.dev/icons/) icons**, fetched on demand and cached in
+  `assets/lucide-cache/` (never vendored). Extend the `KEYCODE_TO_LUCIDE` map in `vial.py` to add
+  more, or edit the size/offset defaults in `QuadrantSpec`.
+- **Transparent/`KC_NO`** layers → that quadrant is left empty. Layer-tap / mod-tap / modifier
+  wrappers show the underlying tap key; `MO(n)` etc. show `Ln`.
+
+Add `--emit-layout out.yaml` to also dump the computed per-key legends as a layout YAML you can
+hand-tune and feed back through `main.py`. Output bodies are exactly the same three per key
+(`<key>` / `<key>.legend` / `<key>.stem`) as above.
 
 ## Configuration
 

@@ -1,2 +1,9 @@
 __pycache__
 _bkup_*
+assets/lucide-cache/
+scratch_out/
+output/*.stl
+output/*.3mf
+output/*.step
+output/*.brep
+err.log
