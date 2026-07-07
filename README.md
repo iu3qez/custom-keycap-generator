@@ -97,12 +97,16 @@ Generate a whole set straight from a **Vial** keymap, with up to four layers lai
 four quadrants:
 
 ```bash
-uv run python generate_vial.py g20 board.json keymap.vil -f 3mf
+uv run python generate_vial.py g20 keymap.vil -f 3mf                  # ortho grid from the keymap
+uv run python generate_vial.py g20 keymap.vil --board board.json      # exact positions/widths
 ```
 
-- **`board.json`** — the keyboard's Vial definition (KLE physical layout under `layouts.keymap`);
-  supplies key positions and widths.
-- **`keymap.vil`** — a Vial keymap export (`layout[layer][row][col]` of keycodes).
+- **`keymap.vil`** — a Vial keymap export (`layout[layer][row][col]` of keycodes). Required.
+- **`--board board.json`** — the keyboard's Vial definition (KLE physical layout under
+  `layouts.keymap`), for exact positions and widths. **Optional**: when omitted, the physical grid
+  is derived straight from the keymap matrix — every populated cell is a 1u key, and an interior
+  `-1` gap is absorbed by the key beside it (so a 2u spacebar comes out 2u). Position only matters
+  for previews; a printed keycap depends solely on its width.
 
 Each cap gets one legend per layer, placed clockwise from the large main legend:
 

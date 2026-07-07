@@ -32,7 +32,7 @@ uv run python main.py g20 planck -f 3mf   # one multi-object 3mf per key (body+l
 uv run python main.py g20 planck_poc      # 5-key proof-of-concept (one per legend case)
 uv run python assemble.py g20 planck      # whole set in ONE STEP -> output/planck.step
 uv run python visualize.py                # live-preview ONE key via ocp_vscode `show()`
-uv run python generate_vial.py g20 board.json keymap.vil -f 3mf   # set from a Vial keymap
+uv run python generate_vial.py g20 keymap.vil -f 3mf              # set from a Vial keymap (ortho)
 ```
 
 - Formats: `stl` (default), `brep`, `step`, `3mf` (`-f/--format`), output dir via `-o`.
@@ -74,15 +74,19 @@ Three-file pipeline, all `from build123d import *`:
   closed wires, inflate open strokes into ribbons via `offset(side=Side.BOTH)` (build123d `trace`
   **segfaults** the OCP kernel — do not use it), then center + mirror-Y + scale to `size`.
 - **`vial.py`** — Vial → legends. `parse_board` reads a keyboard's KLE layout (`layouts.keymap`)
-  into physical keys (matrix pos + width from standard KLE cursor rules); `parse_keymap` reads a
-  `.vil` into `layout[layer][row][col]`. `resolve_keycode` maps a keycode to text or a Lucide icon
-  name (A-Z/0-9 & typographic symbols → text; functional keys → `KEYCODE_TO_LUCIDE`; transparent →
-  None; wrappers unwrapped). `quadrant_legends` places up to four layers clockwise from the large
-  top-left main (`QuadrantSpec` holds sizes/offsets). `lucide_svg` fetches icons from Lucide's
-  GitHub raw endpoint into `assets/lucide-cache/` (gitignored) via urllib + the proxy CA bundle.
-- **`generate_vial.py`** — runner: `style + board.json + keymap.vil` → one cap per physical key,
-  same three exported bodies as `main.py`. `--emit-layout` dumps the computed keys as a layout YAML;
-  `--base`/`--layers`/`--glyph-dir` tune the run.
+  into physical keys (matrix pos + width from standard KLE cursor rules); `board_from_keymap`
+  derives the same grid straight from a `.vil` matrix when no board file is given (each populated
+  cell = 1u; an interior `-1` gap is absorbed by the key to its right → 2u spacebar). `parse_keymap`
+  reads a `.vil` into `layout[layer][row][col]` (values are keycode strings or `-1`).
+  `resolve_keycode` maps a keycode to text or a Lucide icon name (A-Z/0-9 & typographic/keypad
+  symbols → text; functional keys → `KEYCODE_TO_LUCIDE`/`RM_TO_LUCIDE`; `KC_ALIASES` folds long QMK
+  spellings to short; transparent/`-1` → None; tap/mod/layer wrappers unwrapped). `quadrant_legends`
+  places up to four layers clockwise from the large top-left main (`QuadrantSpec` holds
+  sizes/offsets). `lucide_svg` fetches icons from Lucide's GitHub raw endpoint into
+  `assets/lucide-cache/` (gitignored) via urllib + the proxy CA bundle.
+- **`generate_vial.py`** — runner: `style + keymap.vil [--board board.json]` → one cap per physical
+  key, same three exported bodies as `main.py`. `--emit-layout` dumps the computed keys as a layout
+  YAML; `--base`/`--layers`/`--glyph-dir` tune the run.
 - **`assemble.py`** — separate entry point that lays every key out at its grid position (from the
   layout's top-level `grid:` section, `UNIT = 19mm/unit`) and writes the whole set as **one
   multi-solid STEP** (`output/<layout>.step`), each solid labeled `<key>` / `<key>.legend` /

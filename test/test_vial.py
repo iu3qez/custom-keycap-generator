@@ -10,8 +10,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from vial import (
-    parse_board, parse_keymap, keycodes_for, resolve_keycode,
-    quadrant_legends, QuadrantSpec, Legend,
+    parse_board, board_from_keymap, parse_keymap, keycodes_for,
+    resolve_keycode, quadrant_legends, QuadrantSpec, Legend,
 )
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -60,7 +60,35 @@ assert resolve_keycode("MO(1)") == Legend("text", "L1")
 assert resolve_keycode("LT(2, KC_A)") == Legend("text", "A")   # tap key shown
 assert resolve_keycode("LSFT(KC_B)") == Legend("text", "B")
 assert resolve_keycode("KC_LEFT") == Legend("icon", "arrow-left")
+# long QMK spellings via aliases
+assert resolve_keycode("KC_BSPACE") == Legend("icon", "delete")
+assert resolve_keycode("KC_LSHIFT") == Legend("icon", "arrow-big-up")
+assert resolve_keycode("KC_SCOLON") == Legend("text", ";")
+assert resolve_keycode("KC_ENTER") == Legend("icon", "corner-down-left")
+# keypad, user, layer, rgb keycodes
+assert resolve_keycode("KC_KP_7") == Legend("text", "7")
+assert resolve_keycode("KC_KP_ASTERISK") == Legend("text", "*")
+assert resolve_keycode("USER01") == Legend("text", "U1")
+assert resolve_keycode("TO(1)") == Legend("text", "L1")
+assert resolve_keycode("RM_VALU") == Legend("icon", "sun")
+assert resolve_keycode(-1) is None            # absent matrix cell
 print("OK keycodes resolve to text / icon / None as specified")
+
+
+# --- ortho grid derived from a .vil matrix --------------------------------- #
+# Fixture keymap is a full 4x12 with no gaps -> 48 unit keys.
+ortho = board_from_keymap(layout)
+assert len(ortho) == 48, len(ortho)
+assert all(k.w == 1.0 for k in ortho)
+# A matrix with an interior -1 gap left of a key widens that key to 2u.
+gap_layout = [[
+    ["KC_A", "KC_B", -1, "KC_SPACE", "KC_C"],
+]]
+gk = board_from_keymap(gap_layout)
+assert len(gk) == 4, gk
+space = [k for k in gk if k.col == 3][0]
+assert space.w == 2.0, f"space should absorb the -1 gap: {space.w}"
+print("OK ortho grid from matrix: 1u keys + 2u gap absorption")
 
 
 # --- quadrant legends (offline: no icon fetch) ----------------------------- #

@@ -118,8 +118,36 @@ KEYCODE_TO_SYMBOL = {
     "KC_QUES": "?",
 }
 
-# "no legend on this layer" sentinels.
-_TRANSPARENT = {"KC_TRNS", "KC_TRANSPARENT", "_______", "KC_NO", "XXXXXXX", ""}
+# Long / alternate QMK spellings -> the canonical short name used in the maps
+# above. Applied first in resolve_keycode so a keymap may use either form.
+KC_ALIASES = {
+    "KC_BSPACE": "KC_BSPC", "KC_ENTER": "KC_ENT", "KC_ESCAPE": "KC_ESC",
+    "KC_CAPSLOCK": "KC_CAPS", "KC_LSHIFT": "KC_LSFT", "KC_RSHIFT": "KC_RSFT",
+    "KC_LCTRL": "KC_LCTL", "KC_RCTRL": "KC_RCTL", "KC_LCTL": "KC_LCTL",
+    "KC_GRAVE": "KC_GRV", "KC_QUOTE": "KC_QUOT", "KC_SCOLON": "KC_SCLN",
+    "KC_COMMA": "KC_COMM", "KC_SLASH": "KC_SLSH", "KC_MINUS": "KC_MINS",
+    "KC_EQUAL": "KC_EQL", "KC_LBRACKET": "KC_LBRC", "KC_RBRACKET": "KC_RBRC",
+    "KC_BSLASH": "KC_BSLS", "KC_DELETE": "KC_DEL", "KC_INSERT": "KC_INS",
+    "KC_PGDOWN": "KC_PGDN", "KC_RIGHT": "KC_RGHT",
+    "KC_SEMICOLON": "KC_SCLN", "KC_BACKSPACE": "KC_BSPC",
+}
+
+# QMK RGB-matrix keycodes -> Lucide icon (best-effort; refine as you like).
+RM_TO_LUCIDE = {
+    "RM_TOGG": "lightbulb", "RM_NEXT": "palette", "RM_PREV": "palette",
+    "RM_HUEU": "palette", "RM_HUED": "palette",
+    "RM_SATU": "droplet", "RM_SATD": "droplet-off",
+    "RM_VALU": "sun", "RM_VALD": "sun-dim",
+    "RM_SPDU": "gauge", "RM_SPDD": "gauge",
+}
+
+_KP_SYMBOL = {"ASTERISK": "*", "SLASH": "/", "PLUS": "+", "MINUS": "-",
+              "DOT": ".", "COMMA": ",", "EQUAL": "=", "ENTER": "⏎"}
+_USER_RE = re.compile(r"^USER0*(\d+)$")
+
+# "no legend on this layer" sentinels. -1 means "no physical key" in a .vil.
+_TRANSPARENT = {"KC_TRNS", "KC_TRANSPARENT", "_______", "KC_NO",
+                "XXXXXXX", "", "-1", "KC_ROLL_OVER"}
 
 # Layer-switch wrappers: MO(1), TG(2), TT(3), DF(0), OSL(1) ...
 _LAYER_RE = re.compile(r"^(MO|TG|TT|DF|OSL|TO)\((\d+)\)$")
@@ -138,13 +166,32 @@ class Legend:
     value: str         # the character/word, or the Lucide icon name
 
 
-def resolve_keycode(kc: str) -> Legend | None:
-    """Map a Vial keycode to a Legend, or None for transparent/empty keys."""
-    if kc is None:
-        return None
+def resolve_keycode(kc) -> Legend | None:
+    """Map a Vial keycode to a Legend, or None for transparent/empty keys.
+    Accepts the raw .vil value (a string, or -1 for an absent key)."""
+    if not isinstance(kc, str):
+        return None                      # -1 (int) = no physical key
     kc = kc.strip()
     if kc in _TRANSPARENT:
         return None
+    kc = KC_ALIASES.get(kc, kc)
+
+    # Keypad keys -> their digit/symbol as text.
+    if kc.startswith("KC_KP_"):
+        rest = kc[len("KC_KP_"):]
+        if rest.isdigit():
+            return Legend("text", rest)
+        if rest in _KP_SYMBOL:
+            return Legend("text", _KP_SYMBOL[rest])
+    # RGB-matrix controls -> icon.
+    if kc in RM_TO_LUCIDE:
+        return Legend("icon", RM_TO_LUCIDE[kc])
+    # Vial user keycodes -> "U<n>".
+    m = _USER_RE.match(kc)
+    if m:
+        return Legend("text", f"U{m.group(1)}")
+    if kc in ("QK_CLEAR_EEPROM", "EE_CLR"):
+        return Legend("text", "Clr")
 
     # Unwrap tap/mod/layer-tap wrappers to the underlying tap key.
     for rx in (_LT_RE, _MT_RE, _MOD_RE):
@@ -315,6 +362,45 @@ def parse_board(path: str) -> list[PhysKey]:
             x += w
             w = h = 1.0
         y += 1.0
+    return keys
+
+
+def board_from_keymap(layout: list[list[list]]) -> list[PhysKey]:
+    """Derive a physical grid straight from a `.vil` matrix, no board file.
+
+    A matrix cell is a physical key if *any* layer has a real keycode there
+    (`-1` marks an absent cell). Keys are 1u by default; an interior `-1` gap
+    is absorbed by the key immediately to its right, so a 2u spacebar (matrix
+    cell next to a `-1`) comes out 2u wide. Position is only for previews;
+    the printed keycap depends solely on width."""
+    if not layout:
+        return []
+    layers, rows, cols = len(layout), len(layout[0]), len(layout[0][0])
+
+    def present(r: int, c: int) -> bool:
+        return any(layout[L][r][c] != -1 for L in range(layers))
+
+    keys: list[PhysKey] = []
+    for r in range(rows):
+        used = [c for c in range(cols) if present(r, c)]
+        if not used:
+            continue
+        last = used[-1]
+        x = 0.0
+        pending = 0          # interior gap units waiting to widen the next key
+        started = False
+        for c in range(last + 1):
+            if not present(r, c):
+                if started:
+                    pending += 1     # interior gap -> next key absorbs it
+                else:
+                    x += 1.0         # leading offset, before any key in the row
+                continue
+            w = 1.0 + pending
+            pending = 0
+            keys.append(PhysKey(row=r, col=c, x=x, y=float(r), w=w, h=1.0))
+            started = True
+            x += w
     return keys
 
 

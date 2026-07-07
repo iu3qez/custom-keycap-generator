@@ -25,15 +25,18 @@ from tqdm import tqdm
 from key import KeyConfig, Key
 from stem import stem_from_config
 from vial import (
-    parse_board, parse_keymap, keycodes_for, quadrant_legends,
-    QuadrantSpec, PhysKey, DEFAULT_CACHE,
+    parse_board, board_from_keymap, parse_keymap, keycodes_for,
+    quadrant_legends, QuadrantSpec, PhysKey, DEFAULT_CACHE,
 )
 
 parser = argparse.ArgumentParser(
     "generate_vial", description="Generate a keycap set from a Vial keymap")
 parser.add_argument("style", help="style name in configs/styles (e.g. g20)")
-parser.add_argument("board", help="path to Vial keyboard definition (KLE json)")
 parser.add_argument("keymap", help="path to Vial keymap export (.vil)")
+parser.add_argument("--board", default=None,
+                    help="Vial keyboard definition (KLE json) for physical "
+                         "positions/widths; omit to derive a 1u ortho grid "
+                         "(with 2u gaps) straight from the keymap matrix")
 parser.add_argument("-o", "--output-path", default="output")
 parser.add_argument("-f", "--format", default="stl",
                     choices=["stl", "brep", "step", "3mf"])
@@ -70,9 +73,14 @@ def main():
 
     with open(f"configs/styles/{args.style}.yaml") as f:
         style = yaml.safe_load(f)
-    keys = parse_board(args.board)
     layout = parse_keymap(args.keymap)
-    print(f"Board: {len(keys)} keys; keymap: {len(layout)} layers "
+    if args.board:
+        keys = parse_board(args.board)
+        source = f"board '{os.path.basename(args.board)}'"
+    else:
+        keys = board_from_keymap(layout)
+        source = "keymap matrix (ortho fallback)"
+    print(f"{len(keys)} keys from {source}; keymap: {len(layout)} layers "
           f"(placing {layers}).")
 
     key_h = float(style["global"]["key_h"])
