@@ -12,8 +12,13 @@ This is primarily intended for strange key layouts, such as ergonomic or split k
 > `Text → extrude → intersect`, no coplanar slivers) exported as a separate body, plus a stem
 > support-blocker modifier per key. See [Legends & MMU](#legends--mmu-this-fork).
 >
+> It can also build a whole set straight from a **Vial keymap**, laying up to four layers into the
+> cap's four quadrants and drawing functional keys as **[Lucide](https://lucide.dev/icons/) icons**
+> (text stays text). See [From a Vial keymap](#from-a-vial-keymap-this-fork).
+>
 > ```bash
-> uv run python main.py g20 planck -f 3mf   # full Planck G20 set, one multi-object 3mf per key
+> uv run python main.py g20 planck -f 3mf       # full Planck G20 set, one multi-object 3mf per key
+> uv run python generate_vial.py g20 keymap.vil -f 3mf   # a set straight from a Vial keymap
 > ```
 
 ![Example keycap (stl)](img/r1.stl)
@@ -84,10 +89,52 @@ keys:
   tab:       {base: G20, width: 1.0, legends: [{text: "⇥"}]}                 # glyph
 ```
 
-Each legend entry: `text` (required), `size` (mm), `dx`/`dy` (offset on the top, mm), `font`
-(optional override). Fonts are auto-selected — **Nimbus Sans** for text/arrows, **Adwaita Sans**
-for the keyboard glyphs `⇥ ⌫ ⏎ ⇧`. The full example is `configs/layouts/planck.yaml` (Planck 40%,
-G20, 46 keys); `configs/styles/g20.yaml` is the uniform low profile.
+Each legend entry is **either** `text` **or** `svg` (a path to an SVG file, filled and carved just
+like text), plus `size` (mm — cap-height for text, larger-bbox for SVG), `dx`/`dy` (offset on the
+top, mm), and `font` (optional text override). Fonts are auto-selected — **Nimbus Sans** for
+text/arrows, **Adwaita Sans** for the keyboard glyphs `⇥ ⌫ ⏎ ⇧`. The full example is
+`configs/layouts/planck.yaml` (Planck 40%, G20, 46 keys); `configs/styles/g20.yaml` is the uniform
+low profile.
+
+## From a Vial keymap (this fork)
+
+Generate a whole set straight from a **Vial** keymap, with up to four layers laid out in the cap's
+four quadrants:
+
+```bash
+uv run python generate_vial.py g20 keymap.vil -f 3mf                  # ortho grid from the keymap
+uv run python generate_vial.py g20 keymap.vil --board board.json      # exact positions/widths
+```
+
+- **`keymap.vil`** — a Vial keymap export (`layout[layer][row][col]` of keycodes). Required.
+- **`--board board.json`** — the keyboard's Vial definition (KLE physical layout under
+  `layouts.keymap`), for exact positions and widths. **Optional**: when omitted, the physical grid
+  is derived straight from the keymap matrix — every populated cell is a 1u key, and an interior
+  `-1` gap is absorbed by the key beside it (so a 2u spacebar comes out 2u). Position only matters
+  for previews; a printed keycap depends solely on its width.
+
+Each cap gets one legend per layer, placed clockwise from the large main legend:
+
+| quadrant     | layer | size  |
+|--------------|-------|-------|
+| top-left     | 0     | large |
+| top-right    | 1     | small |
+| bottom-right | 2     | small |
+| bottom-left  | 3     | small |
+
+Keycodes resolve to legends automatically (`vial.py`):
+
+- **A-Z / 0-9** and typographic symbols (`; , . / - = [ ] ! @ …`) → **text**.
+- **Functional keys** (Shift, Ctrl, Alt, Cmd, Enter, Tab, Backspace, arrows, media, …) →
+  **[Lucide](https://lucide.dev/icons/) icons**, fetched on demand and cached in
+  `assets/lucide-cache/` (never vendored). Extend the `KEYCODE_TO_LUCIDE` map in `vial.py` to add
+  more, or edit the size/offset defaults in `QuadrantSpec`.
+- **Transparent/`KC_NO`** layers → that quadrant is left empty. Layer-tap / mod-tap / modifier
+  wrappers show the underlying tap key; `MO(n)` etc. show `Ln`.
+
+Add `--emit-layout out.yaml` to also dump the computed per-key legends as a layout YAML you can
+hand-tune and feed back through `main.py`. Output bodies are exactly the same three per key
+(`<key>` / `<key>.legend` / `<key>.stem`) as above.
 
 ## Configuration
 

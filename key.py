@@ -1,11 +1,58 @@
 from build123d import *
 import numpy as np
 from dataclasses import dataclass, field
-from functools import cached_property
+from functools import cached_property, lru_cache
 from stem import Stem
 
 
 SYMBOL_GLYPHS = {"⇥", "⌫", "⏎", "⇧"}
+
+# Lucide icons are stroke SVGs (fill:none, stroke-width 2 in a 24u viewbox).
+# Open strokes are inflated into ribbons of this width so they become solids.
+SVG_STROKE_WIDTH = 2.0
+
+
+@lru_cache(maxsize=256)
+def _svg_faces(path: str) -> Sketch:
+    """Import an SVG into a filled, origin-centered, Y-up Sketch in the SVG's
+    native units (unscaled). Faces are kept as-is; closed wires are filled;
+    open strokes (Lucide) are inflated into ribbons via a both-sides offset.
+    Cached by path so an icon shared across many keys is imported once."""
+    objs = import_svg(path)
+    sk = Sketch()
+    for o in objs:
+        try:
+            if isinstance(o, Face):
+                sk += o
+            elif isinstance(o, (Wire, Edge)):
+                wire = o if isinstance(o, Wire) else Wire([o])
+                if getattr(wire, "is_closed", False):
+                    sk += make_face(wire)
+                else:
+                    ribbon = offset(
+                        wire, amount=SVG_STROKE_WIDTH / 2.0,
+                        side=Side.BOTH, closed=False,
+                    )
+                    sk += make_face(ribbon)
+        except Exception:
+            # Skip the odd un-fillable sub-path rather than fail the whole icon.
+            continue
+    if not sk.faces():
+        raise ValueError(f"no drawable geometry in SVG: {path}")
+    # SVG space is y-down; center at origin and flip to build123d's y-up.
+    center = sk.bounding_box().center()
+    sk = sk.moved(Location((-center.X, -center.Y, 0)))
+    return mirror(sk, about=Plane.XZ)
+
+
+def svg_legend_sketch(path: str, size: float) -> Sketch:
+    """A filled Sketch for an SVG legend, centered at the origin and scaled so
+    its larger dimension equals `size` (mm)."""
+    sk = _svg_faces(path)
+    span = max(sk.bounding_box().size.X, sk.bounding_box().size.Y)
+    if span > 1e-9:
+        sk = scale(sk, by=size / span)
+    return sk
 
 
 @dataclass
@@ -101,13 +148,16 @@ class Key:
         with BuildPart() as cutter:
             with BuildSketch(Plane.XY.offset(z_floor)):
                 for leg in self.legends:
-                    text = leg["text"]
                     size = leg.get("size", self.legend_size)
                     dx = leg.get("dx", 0.0)
                     dy = leg.get("dy", 0.0)
-                    font = self._legend_font_for(text, leg.get("font"))
                     with Locations((dx, dy)):
-                        Text(text, font_size=size, font=font)
+                        if leg.get("svg"):
+                            add(svg_legend_sketch(leg["svg"], size))
+                        else:
+                            text = leg["text"]
+                            font = self._legend_font_for(text, leg.get("font"))
+                            Text(text, font_size=size, font=font)
             extrude(amount=z_top - z_floor)
         return cutter.part
 
