@@ -6,4 +6,5 @@ output/*.stl
 output/*.3mf
 output/*.step
 output/*.brep
+output_backlit/
 err.log

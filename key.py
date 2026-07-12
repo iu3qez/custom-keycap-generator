@@ -80,6 +80,13 @@ class KeyConfig:
     legend_size: float = 5.5
     legend_font: str = "Nimbus Sans"
     legend_symbol_font: str = "Adwaita Sans"
+    # Backlit mode: carve the legends all the way through the opaque top layer
+    # (into the cavity) instead of a blind recess, and close the holes from
+    # behind with a transparent diffuser slab of `diffuser_depth` on the inner
+    # ceiling. The legend plug (material 2, printed transparent) then becomes
+    # diffuser + through-columns as one connected body, lit by LEDs below.
+    legend_through: bool = False
+    diffuser_depth: float = 0.8
 
 
 class Key:
@@ -119,6 +126,8 @@ class Key:
         self.legend_size = config.legend_size
         self.legend_font = config.legend_font
         self.legend_symbol_font = config.legend_symbol_font
+        self.legend_through = config.legend_through
+        self.diffuser_depth = config.diffuser_depth
 
         self.stem = stem
 
@@ -139,10 +148,21 @@ class Key:
         if not self.legends:
             return None
 
-        # Top-surface height at the key center; the flat cutter floor sits
-        # `legend_depth` below it (recess depth ~uniform on the near-flat top).
-        h_center = (self.front_dy + self.back_dy) / 2.0
-        z_floor = h_center - self.legend_depth
+        # In backlit mode the glyphs are through-holes: the floor drops to the
+        # top of the diffuser slab (the inner ceiling raised by `diffuser_depth`)
+        # so the cut passes entirely through the opaque top layer. Otherwise the
+        # flat floor sits `legend_depth` below the center top (a blind recess).
+        if self.legend_through:
+            # Sink the floor into the diffuser top by a real overlap (not just
+            # `eps`) so the through-columns and the diffuser slab reliably fuse
+            # into one connected plug solid.
+            overlap = min(0.2, self.diffuser_depth / 2.0)
+            z_floor = self._top_inner_z + self.diffuser_depth - overlap
+        else:
+            # Top-surface height at the key center (recess depth ~uniform on the
+            # near-flat top).
+            h_center = (self.front_dy + self.back_dy) / 2.0
+            z_floor = h_center - self.legend_depth
         z_top = self.max_height + 1.0            # safely above the tallest corner
 
         with BuildPart() as cutter:
@@ -161,13 +181,57 @@ class Key:
             extrude(amount=z_top - z_floor)
         return cutter.part
 
+    @property
+    def _top_inner_z(self) -> float:
+        """Height of the inner ceiling: the underside of the filled-in top
+        block (also where the stem tube ends)."""
+        return self.stem_depth + self.inner_rad
+
+    @cached_property
+    def _diffuser(self) -> "Part | None":
+        """Backlit mode only: a thin transparent slab of `diffuser_depth` on the
+        inner ceiling, clipped to the cavity outline so it stays inside the
+        walls (leaving the opaque skirt continuous). It closes the through-hole
+        glyphs from behind and diffuses the LED light."""
+        if not self.legends or not self.legend_through:
+            return None
+        z0 = self._top_inner_z
+        with BuildPart() as slab:
+            with Locations((0.0, 0.0, z0)):
+                Box(
+                    2 * self.key_w, 2 * self.key_h, self.diffuser_depth,
+                    align=(Align.CENTER, Align.CENTER, Align.MIN),
+                )
+        diffuser = slab.part & self._outer_key_profile(shift=-self.wall)
+
+        # Punch a clearance around the stem so the opaque top keeps a solid
+        # pillar bonding it to the stem (otherwise the full-area slab severs the
+        # stem post from the cap). Glyphs live in the quadrants, clear of it.
+        cross = self.stem.build(self)
+        cbb = cross.bounding_box()
+        margin = 0.6
+        with BuildPart() as clearance:
+            with Locations((cbb.center().X, cbb.center().Y, z0 - self.eps)):
+                Box(
+                    (cbb.max.X - cbb.min.X) + 2 * margin,
+                    (cbb.max.Y - cbb.min.Y) + 2 * margin,
+                    self.diffuser_depth + 2 * self.eps,
+                    align=(Align.CENTER, Align.CENTER, Align.MIN),
+                )
+        return diffuser - clearance.part
+
     def legend_plug(self) -> "Part | None":
-        """The flush legend plug (material 2): the cutter clipped by the solid
-        outer profile, so its top follows the cap surface exactly."""
+        """The legend plug (material 2). In flush mode: the cutter clipped by the
+        solid outer profile, so its top follows the cap surface exactly. In
+        backlit mode: those through-columns fused with the transparent diffuser
+        slab, one connected body printed in translucent filament."""
         cutter = self._legend_cutter
         if cutter is None:
             return None
-        return cutter & self._outer_key_profile()
+        plug = cutter & self._outer_key_profile()
+        if self.legend_through and self._diffuser is not None:
+            plug = plug + self._diffuser
+        return plug
 
     def stem_guard(self) -> Part:
         """A slicer support-blocker modifier that fills the Cherry stem's inner
@@ -319,8 +383,12 @@ class Key:
             shape += bump.part
 
         # Carve the legend recess (material 1). Done last so it cuts through the
-        # finished top surface; a no-op when the key has no legends.
+        # finished top surface; a no-op when the key has no legends. In backlit
+        # mode the cut is a through-hole and the diffuser slab is scooped out of
+        # the inner ceiling too (both handed to the transparent legend plug).
         if self._legend_cutter is not None:
             shape = shape - self._legend_cutter
+            if self.legend_through and self._diffuser is not None:
+                shape = shape - self._diffuser
 
         return shape

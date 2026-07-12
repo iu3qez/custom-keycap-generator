@@ -48,6 +48,14 @@ parser.add_argument("--glyph-dir", default=DEFAULT_CACHE,
                     help="Lucide icon cache directory")
 parser.add_argument("--emit-layout", metavar="PATH",
                     help="also write the computed keys as a layout YAML")
+parser.add_argument("--backlit", action="store_true",
+                    help="cut legends as through-holes and close them from "
+                         "behind with a transparent diffuser slab, so the "
+                         "legend plug (material 2) can be printed translucent "
+                         "and lit by LEDs from below")
+parser.add_argument("--diffuser-depth", type=float, default=0.8,
+                    help="thickness (mm) of the backlit diffuser slab on the "
+                         "inner ceiling (default: 0.8)")
 
 
 def export_shape(shape, path, fmt):
@@ -98,6 +106,9 @@ def main():
             | style.get("bases", {}).get(args.base, {})
             | {"width": pk.w, "legends": legends}
         )
+        if args.backlit:
+            conf |= {"legend_through": True,
+                     "diffuser_depth": args.diffuser_depth}
         stem = stem_from_config(**conf.pop("stem", {}))
         key = Key(KeyConfig(**conf), stem)
 
