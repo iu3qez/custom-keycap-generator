@@ -61,6 +61,7 @@ uv run python generate_vial.py g20 keymap.vil -f 3mf              # ortho grid f
 uv run python generate_vial.py g20 keymap.vil --board board.json  # exact positions/widths
 uv run python generate_vial.py g20 keymap.vil --emit-layout out.yaml   # dump computed legends
 uv run python generate_vial.py g20 keymap.vil -f 3mf --step     # + whole set as one STEP
+uv run python generate_vial.py g20 keymap.vil --orca            # + OrcaSlicer-ready set (filaments/blocker set)
 ```
 
 - **Legends**: A-Z/0-9 and typographic/keypad symbols → **text**; functional keys (Shift, Enter,
