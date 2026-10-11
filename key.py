@@ -1,8 +1,18 @@
 from build123d import *
 import numpy as np
+import os
+import sys
 from dataclasses import dataclass, field
 from functools import cached_property, lru_cache
 from stem import Stem
+
+
+# OCCT on macOS only scans /System/Library/Fonts and /Library/Fonts
+# (Font_FontMgr.cxx), so fonts installed per user (Font Book default) are not
+# found and Text() silently falls back to Arial. Register them explicitly.
+_USER_FONTS = os.path.expanduser("~/Library/Fonts")
+if sys.platform == "darwin" and os.path.isdir(_USER_FONTS):
+    FontManager().register_folder(_USER_FONTS)
 
 
 SYMBOL_GLYPHS = {"⇥", "⌫", "⏎", "⇧"}
