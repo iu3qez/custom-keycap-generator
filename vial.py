@@ -90,13 +90,13 @@ KEYCODE_TO_LUCIDE = {
     "KC_PSCR": "camera",
     "KC_HOME": "corner-left-up", "KC_END": "corner-right-down",
     "KC_PGUP": "chevrons-up", "KC_PGDN": "chevrons-down",
-    "KC_DEL": "delete",
 }
 
 # Functional keycodes with no good icon -> short text label.
 KEYCODE_TO_TEXT = {
     "KC_ESC": "Esc", "KC_CAPS": "Caps", "KC_SPC": "", "KC_SPACE": "",
     "KC_INS": "Ins", "KC_APP": "Menu", "KC_PAUS": "Pause", "KC_PSCR": "PrSc",
+    "KC_DEL": "Del", "KC_SCRL": "ScrL",
 }
 # Function row.
 for _n in range(1, 25):
@@ -130,6 +130,9 @@ KC_ALIASES = {
     "KC_BSLASH": "KC_BSLS", "KC_DELETE": "KC_DEL", "KC_INSERT": "KC_INS",
     "KC_PGDOWN": "KC_PGDN", "KC_RIGHT": "KC_RGHT",
     "KC_SEMICOLON": "KC_SCLN", "KC_BACKSPACE": "KC_BSPC",
+    "KC_PSCREEN": "KC_PSCR", "KC_PRINT_SCREEN": "KC_PSCR",
+    "KC_SCROLLLOCK": "KC_SCRL", "KC_SCROLL_LOCK": "KC_SCRL",
+    "KC_PAUSE": "KC_PAUS",
 }
 
 # QMK RGB-matrix keycodes -> Lucide icon (best-effort; refine as you like).
@@ -155,8 +158,17 @@ _LAYER_RE = re.compile(r"^(MO|TG|TT|DF|OSL|TO)\((\d+)\)$")
 _LT_NUM_RE = re.compile(r"^LT(\d+)\((KC_\w+)\)$")
 _LT_RE = re.compile(r"^LT\(\s*\d+\s*,\s*(KC_\w+)\s*\)$")
 _MT_RE = re.compile(r"^MT\(\s*[^,]+,\s*(KC_\w+)\s*\)$")
-# Modifier wrappers: LSFT(KC_X), S(KC_X), LCTL(kc) ... show the inner key.
-_MOD_RE = re.compile(r"^(?:LSFT|RSFT|LCTL|RCTL|LALT|RALT|LGUI|RGUI|S|C|A|G)\((KC_\w+)\)$")
+# Shift wrappers: LSFT(KC_1) -> "!" via the US ANSI shifted glyph (letters keep
+# their letter). Other modifier wrappers (LCTL(kc) ...) show the inner key.
+_SHIFT_RE = re.compile(r"^(?:LSFT|RSFT|S)\((KC_\w+)\)$")
+_MOD_RE = re.compile(r"^(?:LCTL|RCTL|LALT|RALT|LGUI|RGUI|C|A|G)\((KC_\w+)\)$")
+_US_SHIFTED = {
+    "KC_1": "!", "KC_2": "@", "KC_3": "#", "KC_4": "$", "KC_5": "%",
+    "KC_6": "^", "KC_7": "&", "KC_8": "*", "KC_9": "(", "KC_0": ")",
+    "KC_MINS": "_", "KC_EQL": "+", "KC_LBRC": "{", "KC_RBRC": "}",
+    "KC_BSLS": "|", "KC_SCLN": ":", "KC_QUOT": '"', "KC_GRV": "~",
+    "KC_COMM": "<", "KC_DOT": ">", "KC_SLSH": "?",
+}
 
 
 @dataclass
@@ -193,6 +205,12 @@ def resolve_keycode(kc) -> Legend | None:
     if kc in ("QK_CLEAR_EEPROM", "EE_CLR"):
         return Legend("text", "Clr")
 
+    m = _SHIFT_RE.match(kc)
+    if m:
+        inner = KC_ALIASES.get(m.group(1), m.group(1))
+        if inner in _US_SHIFTED:
+            return Legend("text", _US_SHIFTED[inner])
+        return resolve_keycode(inner)
     # Unwrap tap/mod/layer-tap wrappers to the underlying tap key.
     for rx in (_LT_RE, _MT_RE, _MOD_RE):
         m = rx.match(kc)
@@ -236,7 +254,8 @@ class QuadrantSpec:
     fractions of the cap footprint; sizes are in mm."""
     ox_frac: float = 0.22     # horizontal quadrant offset (fraction of width)
     oy_frac: float = 0.24     # vertical quadrant offset (fraction of height)
-    main_text: float = 4.6    # layer-0 text size
+    main_text: float = 4.6    # layer-0 text size (1-2 chars)
+    main_word: float = 3.5    # layer-0 text size for words (3+ chars)
     sub_text: float = 2.5     # layer-1/2/3 text size
     main_icon: float = 5.5    # layer-0 icon target size
     sub_icon: float = 3.2     # layer-1/2/3 icon target size
@@ -283,7 +302,10 @@ def quadrant_legends(
                 entry["icon"] = leg.value  # unresolved; for --emit-layout dumps
             legends.append(entry)
         else:
-            size = spec.main_text if is_main else spec.sub_text
+            if is_main:
+                size = spec.main_word if len(leg.value) >= 3 else spec.main_text
+            else:
+                size = spec.sub_text
             legends.append({"text": leg.value, "size": size, "dx": dx, "dy": dy})
     return legends
 
