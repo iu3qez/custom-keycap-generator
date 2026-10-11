@@ -20,8 +20,10 @@ import os
 import yaml
 from build123d import Unit
 from build123d import export_stl, export_step, export_brep, Mesher
+from build123d import Compound, Location
 from tqdm import tqdm
 
+from assemble import UNIT
 from key import KeyConfig, Key
 from stem import stem_from_config
 from vial import (
@@ -48,6 +50,9 @@ parser.add_argument("--glyph-dir", default=DEFAULT_CACHE,
                     help="Lucide icon cache directory")
 parser.add_argument("--emit-layout", metavar="PATH",
                     help="also write the computed keys as a layout YAML")
+parser.add_argument("--step", action="store_true",
+                    help="also write the whole set as one multi-solid STEP "
+                         "(<keymap>.step), each cap at its board position")
 
 
 def export_shape(shape, path, fmt):
@@ -88,6 +93,7 @@ def main():
     os.makedirs(args.output_path, exist_ok=True)
 
     emitted: dict[str, dict] = {}
+    solids = []
     for pk in tqdm(keys):
         kcs = keycodes_for(layout, pk, layers)
         key_w = key_h * pk.w
@@ -120,8 +126,23 @@ def main():
                 export_shape(plug, os.path.join(out, f"{name}.legend.{fmt}"), fmt)
             export_shape(guard, os.path.join(out, f"{name}.stem.{fmt}"), fmt)
 
+        if args.step:
+            loc = Location(((pk.x + pk.w / 2) * UNIT, -(pk.y + pk.h / 2) * UNIT, 0))
+            for label, part in ((name, body), (f"{name}.legend", plug),
+                                (f"{name}.stem", guard)):
+                if part is not None:
+                    moved = part.moved(loc)
+                    moved.label = label
+                    solids.append(moved)
+
         if args.emit_layout:
             emitted[name] = {"base": args.base, "width": pk.w, "legends": legends}
+
+    if args.step:
+        set_name = os.path.splitext(os.path.basename(args.keymap))[0]
+        step_path = os.path.join(args.output_path, f"{set_name}.step")
+        export_step(Compound(children=solids, label=set_name), step_path)
+        print(f"Wrote {len(solids)} solids -> {step_path}")
 
     if args.emit_layout:
         with open(args.emit_layout, "w") as f:
