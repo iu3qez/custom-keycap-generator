@@ -40,6 +40,7 @@ uv run python main.py g20 planck_poc      # 5-key proof-of-concept (one per lege
 uv run python assemble.py g20 planck      # whole set in ONE STEP -> output/planck.step
 uv run python visualize.py                # live-preview ONE key via ocp_vscode `show()`
 uv run python generate_vial.py g20 keymap.vil -f 3mf              # set from a Vial keymap (ortho)
+uv run python generate_vial.py g20 keymap.vil -f 3mf --step       # + whole set in ONE STEP -> output/keymap.step
 ```
 
 - Formats: `stl` (default), `brep`, `step`, `3mf` (`-f/--format`), output dir via `-o`.
