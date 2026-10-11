@@ -41,6 +41,7 @@ uv run python assemble.py g20 planck      # whole set in ONE STEP -> output/plan
 uv run python visualize.py                # live-preview ONE key via ocp_vscode `show()`
 uv run python generate_vial.py g20 keymap.vil -f 3mf              # set from a Vial keymap (ortho)
 uv run python generate_vial.py g20 keymap.vil -f 3mf --step       # + whole set in ONE STEP -> output/keymap.step
+uv run python generate_vial.py g20 keymap.vil --orca              # + OrcaSlicer-ready set -> output/keymap.orca.3mf
 ```
 
 - Formats: `stl` (default), `brep`, `step`, `3mf` (`-f/--format`), output dir via `-o`.
@@ -53,7 +54,8 @@ uv run python generate_vial.py g20 keymap.vil -f 3mf --step       # + whole set 
 - **Tests** are plain `assert` scripts under `test/` (no pytest): `uv run python test/<file>.py`
   prints `OK ...` per check. `test_legend_*`, `test_poc_layout`, `test_stem_guard` are fast unit
   checks; `test_vial` covers the Vial parser/keycode-resolver/quadrant layout (offline, no icon
-  fetch); `test_mmu_export` renders the POC set (slower, subprocess). Beyond these, "testing" =
+  fetch); `test_svg_legend` checks SVG legends next to text and a self-crossing path;
+  `test_orca3mf` checks the Orca 3mf structure; `test_mmu_export` renders the POC set (slower, subprocess). Beyond these, "testing" =
   render a key and inspect it. No build/lint step.
 - `ocp_vscode`/fontconfig emit warnings on stderr; they are harmless.
 
@@ -137,10 +139,18 @@ Implemented in `key.py` (approach A: `Text → extrude → intersect`):
   Words (Esc/Ctl/…) use `size: 3.5`; ANSI dual pairs `;: ,< .> /?` are two stacked entries at
   `size: 4.0, dy: ±1.2`. Quote `"y"`/`"n"` layout keys so PyYAML doesn't read them as booleans.
 
-MMU workflow: import a key's `.3mf` (or its 3 STLs), assign material 1 to the body, material 2 to
-the `.legend` object(s), and mark the `.stem` object as a no-support modifier. (In 3mf, a legend
-with disconnected glyphs like "Esc" appears as several same-named `<key>.legend` objects — all one
-material.)
+MMU workflow, OrcaSlicer: `generate_vial.py --orca` writes `<keymap>.orca.3mf` (`orca3mf.py`):
+the whole set on one plate, one object per key with parts `<key>` (filament 1), `<key>.legend`
+(filament 2, all glyphs in one part) and `<key>.stem` (`support_blocker`). Orca reads part type,
+name and filament from `Metadata/model_settings.config`; parts must be 3MF `<components>` child
+objects (Orca's triangle-range `firstid/lastid` path is commented out in `bbs_3mf.cpp`). Open it
+from inside Orca (File > Open project): `open -a` on a running Orca may not load it.
+`--legend-depth` overrides `legend_depth`; ~1.8 mm on G20 reaches the cavity ceiling (deeper
+needs the plug clipped to the filler block).
+
+Manual workflow (per-key `.3mf` or STLs): assign material 1 to the body, material 2 to the
+`.legend` object(s), and mark the `.stem` object as a support blocker. (In per-key 3mf, a legend
+with disconnected glyphs like "Esc" appears as several same-named `<key>.legend` objects.)
 
 ## Related prior work
 

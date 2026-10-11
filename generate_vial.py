@@ -24,6 +24,7 @@ from build123d import Compound, Location
 from tqdm import tqdm
 
 from assemble import UNIT
+from orca3mf import export_orca_3mf
 from key import KeyConfig, Key
 from stem import stem_from_config
 from vial import (
@@ -53,6 +54,13 @@ parser.add_argument("--emit-layout", metavar="PATH",
 parser.add_argument("--step", action="store_true",
                     help="also write the whole set as one multi-solid STEP "
                          "(<keymap>.step), each cap at its board position")
+parser.add_argument("--legend-depth", type=float, default=None,
+                    help="legend recess depth in mm (default: style value, "
+                         "0.8); ~1.8 on G20 reaches the cavity ceiling")
+parser.add_argument("--orca", action="store_true",
+                    help="also write the whole set as one OrcaSlicer-ready 3mf "
+                         "(<keymap>.orca.3mf): one object per key, legend on "
+                         "filament 2, stem as support blocker")
 
 
 def export_shape(shape, path, fmt):
@@ -94,6 +102,7 @@ def main():
 
     emitted: dict[str, dict] = {}
     solids = []
+    orca_keys = []
     for pk in tqdm(keys):
         kcs = keycodes_for(layout, pk, layers)
         key_w = key_h * pk.w
@@ -104,6 +113,8 @@ def main():
             | style.get("bases", {}).get(args.base, {})
             | {"width": pk.w, "legends": legends}
         )
+        if args.legend_depth is not None:
+            conf["legend_depth"] = args.legend_depth
         stem = stem_from_config(**conf.pop("stem", {}))
         key = Key(KeyConfig(**conf), stem)
 
@@ -135,6 +146,10 @@ def main():
                     moved.label = label
                     solids.append(moved)
 
+        if args.orca:
+            orca_keys.append((name, ((pk.x + pk.w / 2) * UNIT, (pk.y + pk.h / 2) * UNIT),
+                              {"body": body, "legend": plug, "stem": guard}))
+
         if args.emit_layout:
             emitted[name] = {"base": args.base, "width": pk.w, "legends": legends}
 
@@ -143,6 +158,16 @@ def main():
         step_path = os.path.join(args.output_path, f"{set_name}.step")
         export_step(Compound(children=solids, label=set_name), step_path)
         print(f"Wrote {len(solids)} solids -> {step_path}")
+
+    if args.orca:
+        # board y grows downwards; flip it and shift so the set sits at
+        # positive plate coordinates with a 10 mm margin
+        max_y = max(y for _, (_, y), _ in orca_keys)
+        orca_keys = [(n, (x + 10, max_y - y + 10), parts) for n, (x, y), parts in orca_keys]
+        set_name = os.path.splitext(os.path.basename(args.keymap))[0]
+        orca_path = os.path.join(args.output_path, f"{set_name}.orca.3mf")
+        export_orca_3mf(orca_keys, orca_path)
+        print(f"Wrote {len(orca_keys)} keys -> {orca_path}")
 
     if args.emit_layout:
         with open(args.emit_layout, "w") as f:

@@ -105,6 +105,7 @@ four quadrants:
 uv run python generate_vial.py g20 keymap.vil -f 3mf                  # ortho grid from the keymap
 uv run python generate_vial.py g20 keymap.vil --board board.json      # exact positions/widths
 uv run python generate_vial.py g20 keymap.vil -f 3mf --step           # + whole set as one STEP
+uv run python generate_vial.py g20 keymap.vil --orca                  # + OrcaSlicer-ready set (filaments/blocker set)
 ```
 
 - **`keymap.vil`** — a Vial keymap export (`layout[layer][row][col]` of keycodes). Required.

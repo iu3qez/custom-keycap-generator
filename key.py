@@ -22,6 +22,17 @@ SYMBOL_GLYPHS = {"⇥", "⌫", "⏎", "⇧"}
 SVG_STROKE_WIDTH = 2.0
 
 
+def _stroke_edges(wire) -> Sketch:
+    """Stroke a wire edge by edge: a both-sides offset ribbon per edge, fused.
+    Used where filling or offsetting the whole wire fails (self-crossing)."""
+    sk = Sketch()
+    for e in wire.edges():
+        ribbon = offset(Wire([e]), amount=SVG_STROKE_WIDTH / 2.0,
+                        side=Side.BOTH, closed=False, mode=Mode.PRIVATE)
+        sk += make_face(ribbon, mode=Mode.PRIVATE)
+    return sk
+
+
 @lru_cache(maxsize=256)
 def _svg_faces(path: str) -> Sketch:
     """Import an SVG into a filled, origin-centered, Y-up Sketch in the SVG's
@@ -37,7 +48,10 @@ def _svg_faces(path: str) -> Sketch:
             elif isinstance(o, (Wire, Edge)):
                 wire = o if isinstance(o, Wire) else Wire([o])
                 if getattr(wire, "is_closed", False):
-                    sk += make_face(wire)
+                    face = make_face(wire, mode=Mode.PRIVATE)
+                    # A self-crossing closed path (Lucide "command") fills to
+                    # an invalid face; draw it as a stroke instead.
+                    sk += face if face.is_valid else _stroke_edges(wire)
                 else:
                     ribbon = offset(
                         wire, amount=SVG_STROKE_WIDTH / 2.0,
@@ -52,7 +66,10 @@ def _svg_faces(path: str) -> Sketch:
     # SVG space is y-down; center at origin and flip to build123d's y-up.
     center = sk.bounding_box().center()
     sk = sk.moved(Location((-center.X, -center.Y, 0)))
-    return mirror(sk, about=Plane.XZ)
+    # mode=PRIVATE: these run inside _legend_cutter's BuildSketch, and an
+    # operation called in a builder context also writes into that builder
+    # (mirror defaults to ADD, scale to REPLACE, which wiped earlier glyphs).
+    return mirror(sk, about=Plane.XZ, mode=Mode.PRIVATE)
 
 
 def svg_legend_sketch(path: str, size: float) -> Sketch:
@@ -61,7 +78,7 @@ def svg_legend_sketch(path: str, size: float) -> Sketch:
     sk = _svg_faces(path)
     span = max(sk.bounding_box().size.X, sk.bounding_box().size.Y)
     if span > 1e-9:
-        sk = scale(sk, by=size / span)
+        sk = scale(sk, by=size / span, mode=Mode.PRIVATE)
     return sk
 
 
@@ -155,15 +172,23 @@ class Key:
         z_floor = h_center - self.legend_depth
         z_top = self.max_height + 1.0            # safely above the tallest corner
 
+        # Build SVG sketches before entering the builders: build123d operations
+        # (make_face, offset, mirror, scale) called inside a BuildSketch also
+        # write into it, which used to wipe or duplicate legends.
+        svg_sketches = {
+            i: svg_legend_sketch(leg["svg"], leg.get("size", self.legend_size))
+            for i, leg in enumerate(self.legends) if leg.get("svg")
+        }
+
         with BuildPart() as cutter:
             with BuildSketch(Plane.XY.offset(z_floor)):
-                for leg in self.legends:
+                for i, leg in enumerate(self.legends):
                     size = leg.get("size", self.legend_size)
                     dx = leg.get("dx", 0.0)
                     dy = leg.get("dy", 0.0)
                     with Locations((dx, dy)):
                         if leg.get("svg"):
-                            add(svg_legend_sketch(leg["svg"], size))
+                            add(svg_sketches[i])
                         else:
                             text = leg["text"]
                             font = self._legend_font_for(text, leg.get("font"))
