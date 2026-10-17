@@ -42,6 +42,8 @@ uv run python visualize.py                # live-preview ONE key via ocp_vscode 
 uv run python generate_vial.py g20 keymap.vil -f 3mf              # set from a Vial keymap (ortho)
 uv run python generate_vial.py g20 keymap.vil -f 3mf --step       # + whole set in ONE STEP -> output/keymap.step
 uv run python generate_vial.py g20 keymap.vil --orca              # + OrcaSlicer-ready set -> output/keymap.orca.3mf
+uv run python generate_vial.py g20 keymap.vil --emit-layout configs/layouts/mine.yaml --layout-only  # editable YAML, no caps
+uv run python main.py g20 mine -f 3mf --orca --step               # build the edited YAML; whole set needs `pos` per key
 ```
 
 - Formats: `stl` (default), `brep`, `step`, `3mf` (`-f/--format`), output dir via `-o`.
@@ -55,7 +57,7 @@ uv run python generate_vial.py g20 keymap.vil --orca              # + OrcaSlicer
   prints `OK ...` per check. `test_legend_*`, `test_poc_layout`, `test_stem_guard` are fast unit
   checks; `test_vial` covers the Vial parser/keycode-resolver/quadrant layout (offline, no icon
   fetch); `test_svg_legend` checks SVG legends next to text and a self-crossing path;
-  `test_orca3mf` checks the Orca 3mf structure; `test_mmu_export` renders the POC set (slower, subprocess). Beyond these, "testing" =
+  `test_orca3mf` checks the Orca 3mf structure; `test_emit_layout` checks the `--layout-only` YAML; `test_mmu_export` renders the POC set (slower, subprocess). Beyond these, "testing" =
   render a key and inspect it. No build/lint step.
 - `ocp_vscode`/fontconfig emit warnings on stderr; they are harmless.
 
@@ -97,8 +99,11 @@ Three-file pipeline, all `from build123d import *`:
   (legend `stroke`). Caps/Pause/Menu are icons because their words don't fit a quadrant. `lucide_svg` fetches icons from Lucide's GitHub raw endpoint into
   `assets/lucide-cache/` (gitignored) via urllib + the proxy CA bundle.
 - **`generate_vial.py`** — runner: `style + keymap.vil [--board board.json]` → one cap per physical
-  key, same three exported bodies as `main.py`. `--emit-layout` dumps the computed keys as a layout
-  YAML; `--base`/`--layers`/`--glyph-dir` tune the run.
+  key, same three exported bodies as `main.py`. `--emit-layout` dumps the computed keys as an
+  editable layout YAML (`pos: [x, y]` = key top-left in units, icons as `icon: <lucide name>`;
+  `--layout-only` skips building caps). `main.py` builds it: it resolves `icon:` via
+  `vial.resolve_icon_legends` and, with `--orca`/`--step`, places keys from `pos`
+  (`orca3mf.board_to_plate` flips y for the plate). `--base`/`--layers`/`--glyph-dir` tune the run.
 - **`assemble.py`** — separate entry point that lays every key out at its grid position (from the
   layout's top-level `grid:` section, `UNIT = 19mm/unit`) and writes the whole set as **one
   multi-solid STEP** (`output/<layout>.step`), each solid labeled `<key>` / `<key>.legend` /

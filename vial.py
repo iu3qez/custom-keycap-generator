@@ -321,6 +321,19 @@ def quadrant_legends(
     return legends
 
 
+def resolve_icon_legends(legends: list[dict], cache_dir: str = DEFAULT_CACHE) -> list[dict]:
+    """Turn `icon: <lucide name>` legend entries (as written by
+    `generate_vial.py --emit-layout`) into `svg: <cached path>` entries that
+    `Key` can build. Icons are fetched into `cache_dir` on demand."""
+    out = []
+    for leg in legends:
+        if "icon" in leg:
+            leg = dict(leg)
+            leg["svg"] = lucide_svg(leg.pop("icon"), cache_dir)
+        out.append(leg)
+    return out
+
+
 # --------------------------------------------------------------------------- #
 # Vial keyboard definition (KLE) + keymap (.vil) parsing
 # --------------------------------------------------------------------------- #
