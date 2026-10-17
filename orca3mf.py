@@ -64,6 +64,14 @@ def mesh_of(shape, tolerance: float = TOLERANCE, angular_tolerance: float = 0.1)
     return v, t
 
 
+def board_to_plate(keys, margin: float = 10.0):
+    """Convert (name, (x, y), parts) keys from board coordinates (mm, y grows
+    downwards) to plate coordinates: y flipped, shifted so the set sits at
+    positive coordinates with `margin` mm."""
+    max_y = max(y for _, (_, y), _ in keys)
+    return [(n, (x + margin, max_y - y + margin), parts) for n, (x, y), parts in keys]
+
+
 def export_orca_3mf(keys, path, tolerance: float = TOLERANCE):
     """Write keys to one OrcaSlicer-ready 3mf.
 

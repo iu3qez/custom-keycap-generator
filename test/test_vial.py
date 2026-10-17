@@ -66,8 +66,8 @@ assert resolve_keycode("LSFT(KC_LBRACKET)") == Legend("text", "{")
 assert resolve_keycode("LCTL(KC_1)") == Legend("text", "1")   # non-shift mod
 assert resolve_keycode("KC_DELETE") == Legend("text", "Del")
 assert resolve_keycode("KC_PSCREEN") == Legend("icon", "camera")
-assert resolve_keycode("KC_SCROLLLOCK") == Legend("text", "ScrL")
-assert resolve_keycode("KC_PAUSE") == Legend("text", "Pause")
+assert resolve_keycode("KC_SCROLLLOCK") == Legend("text", "Scr")
+assert resolve_keycode("KC_PAUSE") == Legend("icon", "pause")
 assert resolve_keycode("KC_LEFT") == Legend("icon", "arrow-left")
 # long QMK spellings via aliases
 assert resolve_keycode("KC_BSPACE") == Legend("icon", "delete")

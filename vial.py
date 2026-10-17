@@ -88,15 +88,17 @@ KEYCODE_TO_LUCIDE = {
     "KC_MUTE": "volume-x", "KC_VOLU": "volume-2", "KC_VOLD": "volume-1",
     "KC_BRIU": "sun", "KC_BRID": "sun-dim",
     "KC_PSCR": "camera",
+    # Words too wide for a quadrant at a printable size.
+    "KC_CAPS": "arrow-big-up-dash", "KC_PAUS": "pause", "KC_APP": "menu",
     "KC_HOME": "corner-left-up", "KC_END": "corner-right-down",
     "KC_PGUP": "chevrons-up", "KC_PGDN": "chevrons-down",
 }
 
 # Functional keycodes with no good icon -> short text label.
 KEYCODE_TO_TEXT = {
-    "KC_ESC": "Esc", "KC_CAPS": "Caps", "KC_SPC": "", "KC_SPACE": "",
-    "KC_INS": "Ins", "KC_APP": "Menu", "KC_PAUS": "Pause", "KC_PSCR": "PrSc",
-    "KC_DEL": "Del", "KC_SCRL": "ScrL",
+    "KC_ESC": "Esc", "KC_SPC": "", "KC_SPACE": "",
+    "KC_INS": "Ins", "KC_PSCR": "PrSc",
+    "KC_DEL": "Del", "KC_SCRL": "Scr",
 }
 # Function row.
 for _n in range(1, 25):
@@ -251,14 +253,19 @@ def resolve_keycode(kc) -> Legend | None:
 @dataclass
 class QuadrantSpec:
     """Placement/sizing of the four per-layer legends on a cap. Offsets are
-    fractions of the cap footprint; sizes are in mm."""
+    fractions of the cap footprint; sizes are in mm.
+
+    Sized for a 0.2 mm nozzle: Nimbus Sans Bold stems are 0.150 x size, so
+    3.8 mm sub text gives ~0.57 mm strokes (Regular 2.5 mm gave 0.235 mm)."""
     ox_frac: float = 0.22     # horizontal quadrant offset (fraction of width)
     oy_frac: float = 0.24     # vertical quadrant offset (fraction of height)
-    main_text: float = 4.6    # layer-0 text size (1-2 chars)
-    main_word: float = 3.5    # layer-0 text size for words (3+ chars)
-    sub_text: float = 2.5     # layer-1/2/3 text size
-    main_icon: float = 5.5    # layer-0 icon target size
-    sub_icon: float = 3.2     # layer-1/2/3 icon target size
+    main_text: float = 5.5    # layer-0 text size (1-2 chars)
+    main_word: float = 4.0    # layer-0 text size for words (3+ chars)
+    sub_text: float = 3.8     # layer-1/2/3 text size
+    main_icon: float = 6.0    # layer-0 icon target size
+    sub_icon: float = 4.2     # layer-1/2/3 icon target size
+    bold: bool = True         # Nimbus Sans Bold for text legends
+    min_stroke: float = 0.45  # minimum icon stroke width (mm)
 
 
 def quadrant_legends(
@@ -290,7 +297,8 @@ def quadrant_legends(
         is_main = i == 0
         if leg.kind == "icon":
             size = spec.main_icon if is_main else spec.sub_icon
-            entry: dict = {"size": size, "dx": dx, "dy": dy}
+            entry: dict = {"size": size, "dx": dx, "dy": dy,
+                           "stroke": spec.min_stroke}
             if fetch:
                 try:
                     entry["svg"] = lucide_svg(leg.value, cache_dir)
@@ -306,8 +314,24 @@ def quadrant_legends(
                 size = spec.main_word if len(leg.value) >= 3 else spec.main_text
             else:
                 size = spec.sub_text
-            legends.append({"text": leg.value, "size": size, "dx": dx, "dy": dy})
+            entry = {"text": leg.value, "size": size, "dx": dx, "dy": dy}
+            if spec.bold:
+                entry["bold"] = True
+            legends.append(entry)
     return legends
+
+
+def resolve_icon_legends(legends: list[dict], cache_dir: str = DEFAULT_CACHE) -> list[dict]:
+    """Turn `icon: <lucide name>` legend entries (as written by
+    `generate_vial.py --emit-layout`) into `svg: <cached path>` entries that
+    `Key` can build. Icons are fetched into `cache_dir` on demand."""
+    out = []
+    for leg in legends:
+        if "icon" in leg:
+            leg = dict(leg)
+            leg["svg"] = lucide_svg(leg.pop("icon"), cache_dir)
+        out.append(leg)
+    return out
 
 
 # --------------------------------------------------------------------------- #
