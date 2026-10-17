@@ -22,23 +22,24 @@ SYMBOL_GLYPHS = {"⇥", "⌫", "⏎", "⇧"}
 SVG_STROKE_WIDTH = 2.0
 
 
-def _stroke_edges(wire) -> Sketch:
+def _stroke_edges(wire, stroke: float = SVG_STROKE_WIDTH) -> Sketch:
     """Stroke a wire edge by edge: a both-sides offset ribbon per edge, fused.
     Used where filling or offsetting the whole wire fails (self-crossing)."""
     sk = Sketch()
     for e in wire.edges():
-        ribbon = offset(Wire([e]), amount=SVG_STROKE_WIDTH / 2.0,
+        ribbon = offset(Wire([e]), amount=stroke / 2.0,
                         side=Side.BOTH, closed=False, mode=Mode.PRIVATE)
         sk += make_face(ribbon, mode=Mode.PRIVATE)
     return sk
 
 
 @lru_cache(maxsize=256)
-def _svg_faces(path: str) -> Sketch:
+def _svg_faces(path: str, stroke: float = SVG_STROKE_WIDTH) -> Sketch:
     """Import an SVG into a filled, origin-centered, Y-up Sketch in the SVG's
     native units (unscaled). Faces are kept as-is; closed wires are filled;
     open strokes (Lucide) are inflated into ribbons via a both-sides offset.
-    Cached by path so an icon shared across many keys is imported once."""
+    `stroke` is the ribbon width in SVG units. Cached by (path, stroke) so an
+    icon shared across many keys is imported once."""
     objs = import_svg(path)
     sk = Sketch()
     for o in objs:
@@ -51,10 +52,10 @@ def _svg_faces(path: str) -> Sketch:
                     face = make_face(wire, mode=Mode.PRIVATE)
                     # A self-crossing closed path (Lucide "command") fills to
                     # an invalid face; draw it as a stroke instead.
-                    sk += face if face.is_valid else _stroke_edges(wire)
+                    sk += face if face.is_valid else _stroke_edges(wire, stroke)
                 else:
                     ribbon = offset(
-                        wire, amount=SVG_STROKE_WIDTH / 2.0,
+                        wire, amount=stroke / 2.0,
                         side=Side.BOTH, closed=False,
                     )
                     sk += make_face(ribbon)
@@ -72,11 +73,26 @@ def _svg_faces(path: str) -> Sketch:
     return mirror(sk, about=Plane.XZ, mode=Mode.PRIVATE)
 
 
-def svg_legend_sketch(path: str, size: float) -> Sketch:
+def _span(sk: Sketch) -> float:
+    bb = sk.bounding_box()
+    return max(bb.size.X, bb.size.Y)
+
+
+def svg_legend_sketch(path: str, size: float, min_stroke: float = 0.0) -> Sketch:
     """A filled Sketch for an SVG legend, centered at the origin and scaled so
-    its larger dimension equals `size` (mm)."""
-    sk = _svg_faces(path)
-    span = max(sk.bounding_box().size.X, sk.bounding_box().size.Y)
+    its larger dimension equals `size` (mm). If the scaled stroke would be
+    thinner than `min_stroke` (mm), the ribbons are rebuilt wider so small
+    icons stay printable."""
+    stroke = SVG_STROKE_WIDTH
+    sk = _svg_faces(path, stroke)
+    span = _span(sk)
+    # A wider ribbon also grows the span, so refine the width twice.
+    for _ in range(2):
+        if span <= 1e-9 or stroke * size / span >= min_stroke:
+            break
+        stroke = round(min_stroke * span / size, 2)
+        sk = _svg_faces(path, stroke)
+        span = _span(sk)
     if span > 1e-9:
         sk = scale(sk, by=size / span, mode=Mode.PRIVATE)
     return sk
@@ -176,7 +192,8 @@ class Key:
         # (make_face, offset, mirror, scale) called inside a BuildSketch also
         # write into it, which used to wipe or duplicate legends.
         svg_sketches = {
-            i: svg_legend_sketch(leg["svg"], leg.get("size", self.legend_size))
+            i: svg_legend_sketch(leg["svg"], leg.get("size", self.legend_size),
+                                 leg.get("stroke", 0.0))
             for i, leg in enumerate(self.legends) if leg.get("svg")
         }
 
@@ -192,7 +209,10 @@ class Key:
                         else:
                             text = leg["text"]
                             font = self._legend_font_for(text, leg.get("font"))
-                            Text(text, font_size=size, font=font)
+                            style = (FontStyle.BOLD if leg.get("bold")
+                                     else FontStyle.REGULAR)
+                            Text(text, font_size=size, font=font,
+                                 font_style=style)
             extrude(amount=z_top - z_floor)
         return cutter.part
 

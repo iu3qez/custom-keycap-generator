@@ -92,7 +92,9 @@ Three-file pipeline, all `from build123d import *`:
   symbols → text; functional keys → `KEYCODE_TO_LUCIDE`/`RM_TO_LUCIDE`; `KC_ALIASES` folds long QMK
   spellings to short; transparent/`-1` → None; tap/mod/layer wrappers unwrapped). `quadrant_legends`
   places up to four layers clockwise from the large top-left main (`QuadrantSpec` holds
-  sizes/offsets). `lucide_svg` fetches icons from Lucide's GitHub raw endpoint into
+  sizes/offsets). Sizes are set for a 0.2 mm nozzle: text is Nimbus Sans Bold (legend
+  `bold: true`; Bold stem = 0.150 x size), corner text 3.8 mm, icon strokes >= 0.45 mm
+  (legend `stroke`). Caps/Pause/Menu are icons because their words don't fit a quadrant. `lucide_svg` fetches icons from Lucide's GitHub raw endpoint into
   `assets/lucide-cache/` (gitignored) via urllib + the proxy CA bundle.
 - **`generate_vial.py`** — runner: `style + keymap.vil [--board board.json]` → one cap per physical
   key, same three exported bodies as `main.py`. `--emit-layout` dumps the computed keys as a layout
